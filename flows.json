@@ -1338,5 +1338,445 @@
                 "orc-desmembrar-out"
             ]
         ]
+    },
+    {
+        "id": "orc-tab-pedpdf-sync",
+        "type": "tab",
+        "label": "Pedidos PDF - Sync (core)",
+        "disabled": false,
+        "info": "POST /orcamentos/pedidos-pdf/sync\n\nBody: {spItem} \u2014 single SharePoint item payload (all fields optional).\n\nPLACEHOLDER implementation. PA '(Pedidos em PDF) - Sharepoint\u2192Dataverse dataflow' refreshes a Power Automate Dataflow (id ef45bbfa-f86a-4b94-9fd8-46f6c3c22ea9) that maps SharePoint list 'Novos Pedidos' in /sites/vendas to Dataverse cr22f_uniumpedidoempdfs via Power Query M scripts. This endpoint is the core sync subflow and is HTTP-callable by /sync-manual and /on-upload. When the M-script mapping is migrated to Node-RED + Graph API, this flow should: (1) receive a single SP list item payload (fields + id + url); (2) lookup existence in public.pedidos_pdf by nome_do_arquivo+link_do_arquivo; (3) POST (create) or PATCH (update) accordingly; (4) return {ok:true, action, pedidoPdfId}. Requires Graph API app credentials (not yet provisioned on orcamentos container).\n"
+    },
+    {
+        "id": "orc-pedpdf-sync-in",
+        "type": "http in",
+        "z": "orc-tab-pedpdf-sync",
+        "name": "POST /orcamentos/pedidos-pdf/sync",
+        "url": "/orcamentos/pedidos-pdf/sync",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 200,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pedpdf-sync-validate"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-sync-validate",
+        "type": "function",
+        "z": "orc-tab-pedpdf-sync",
+        "name": "Validate Input",
+        "func": "const body = msg.payload || {};\n// Core accepts a single SharePoint item payload. All fields are optional;\n// flow operates as placeholder until PA Power Query dataflow migration lands.\nmsg.spItem = body && typeof body === 'object' ? body : {};\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pedpdf-sync-guard"
+            ],
+            [
+                "orc-pedpdf-sync-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-sync-guard",
+        "type": "function",
+        "z": "orc-tab-pedpdf-sync",
+        "name": "Env Guard",
+        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pedpdf-sync-exec"
+            ],
+            [
+                "orc-pedpdf-sync-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-sync-exec",
+        "type": "function",
+        "z": "orc-tab-pedpdf-sync",
+        "name": "Execute",
+        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst spItem = msg.spItem || {};\nconst nomeDoArquivo = (spItem.nome_do_arquivo || spItem.fileName || spItem.FileLeafRef || null);\ntry {\n    // PLACEHOLDER: PA '(Pedidos em PDF) - Sharepoint\u2192Dataverse dataflow' refreshes a Power Automate\n    // Dataflow (id ef45bbfa-f86a-4b94-9fd8-46f6c3c22ea9) that maps SharePoint list \"Novos Pedidos\"\n    // in site /sites/vendas to Dataverse cr22f_uniumpedidoempdfs via Power Query M scripts.\n    // Migration of the Dataflow's M-script mapping to Node-RED + Graph API calls is deferred to a\n    // later phase (Graph API app credentials not yet configured on the orcamentos container).\n    // This flow currently logs the event and returns a no-op acknowledgment.\n    // When activating: query SP list via Graph (GET /sites/{siteId}/lists/{listId}/items?$expand=fields)\n    // and upsert into public.pedidos_pdf by nome_do_arquivo (+ link_do_arquivo as disambiguation key).\n    let existingCount = null;\n    if (nomeDoArquivo) {\n        const lookup = await pgReq('GET', `/rest/v1/pedidos_pdf?nome_do_arquivo=eq.${encodeURIComponent(nomeDoArquivo)}&select=id&limit=1`, null);\n        if (lookup.statusCode === 200 && Array.isArray(lookup.body)) {\n            existingCount = lookup.body.length;\n        }\n    }\n    node.log(`[sync-pedidos-pdf] Event: nome_do_arquivo='${nomeDoArquivo || '?'}' existingInSupabase=${existingCount === null ? 'not-checked' : existingCount}`);\n    msg.statusCode = 200;\n    msg.payload = { ok: true, synced: false, reason: 'sharepoint-mapping-not-implemented-dev-placeholder', nomeDoArquivo: nomeDoArquivo, existingInSupabase: existingCount, logged: true };\n    return msg;\n} catch (err) {\n    node.error('[sync-pedidos-pdf] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 60,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
+        ],
+        "x": 860,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pedpdf-sync-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-sync-out",
+        "type": "http response",
+        "z": "orc-tab-pedpdf-sync",
+        "name": "Response",
+        "statusCode": "",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "x": 1140,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "orc-pedpdf-sync-catch",
+        "type": "catch",
+        "z": "orc-tab-pedpdf-sync",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 160,
+        "y": 200,
+        "wires": [
+            [
+                "orc-pedpdf-sync-err"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-sync-err",
+        "type": "function",
+        "z": "orc-tab-pedpdf-sync",
+        "name": "Error Handler",
+        "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[sync-pedidos-pdf] CATCH: ' + errMsg);\nmsg.statusCode = msg.statusCode || 500;\nmsg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nmsg.payload = { ok: false, error: 'Internal error', flow: 'sync-pedidos-pdf', timestamp: new Date().toISOString() };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 200,
+        "wires": [
+            [
+                "orc-pedpdf-sync-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tab-pedpdf-manual",
+        "type": "tab",
+        "label": "Pedidos PDF - Sync Manual",
+        "disabled": false,
+        "info": "POST /orcamentos/pedidos-pdf/sync-manual\n\nBody: {token?} \u2014 token optional; ignored in placeholder mode.\n\nPLACEHOLDER implementation. PA '(Pedidos em PDF) - Atualizar manualmente Pedidos em PDF Sharepoint -> Dataverse dataflow' is a manual/PowerApp-triggered wrapper around the same Dataflow (ef45bbfa-...). When migrated, this endpoint should: enumerate ALL items in SP list 'Novos Pedidos' via Graph API (GET /sites/{siteId}/lists/{listId}/items?$expand=fields, paginated via @odata.nextLink), and upsert each into public.pedidos_pdf. Returns {ok:true, synced, created, updated}. Currently returns placeholder ack and logs invocation.\n"
+    },
+    {
+        "id": "orc-pedpdf-manual-in",
+        "type": "http in",
+        "z": "orc-tab-pedpdf-manual",
+        "name": "POST /orcamentos/pedidos-pdf/sync-manual",
+        "url": "/orcamentos/pedidos-pdf/sync-manual",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 200,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pedpdf-manual-validate"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-manual-validate",
+        "type": "function",
+        "z": "orc-tab-pedpdf-manual",
+        "name": "Validate Input",
+        "func": "const body = msg.payload || {};\n// Manual trigger accepts optional {token} \u2014 not required, not validated here.\nmsg.requestBody = body;\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pedpdf-manual-guard"
+            ],
+            [
+                "orc-pedpdf-manual-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-manual-guard",
+        "type": "function",
+        "z": "orc-tab-pedpdf-manual",
+        "name": "Env Guard",
+        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pedpdf-manual-exec"
+            ],
+            [
+                "orc-pedpdf-manual-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-manual-exec",
+        "type": "function",
+        "z": "orc-tab-pedpdf-manual",
+        "name": "Execute",
+        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\ntry {\n    // PLACEHOLDER: PA '(Pedidos em PDF) - Atualizar manualmente Pedidos em PDF Sharepoint -> Dataverse dataflow'\n    // manually triggers a refresh of the same PA Dataflow (id ef45bbfa-f86a-4b94-9fd8-46f6c3c22ea9)\n    // orchestrated by sync-pedidos-pdf. When SharePoint\u2192Supabase mapping is implemented (Graph API),\n    // this endpoint should enumerate all items in SP list \"Novos Pedidos\" and upsert each into\n    // public.pedidos_pdf. For now it reports the target table's current row count as diagnostic.\n    let totalInSupabase = null;\n    const count = await pgReq('HEAD', `/rest/v1/pedidos_pdf?select=id`, null, { 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' });\n    if (count.statusCode >= 200 && count.statusCode < 300) {\n        totalInSupabase = 'see-content-range-header';\n    }\n    // Alternative: use ?select=id with limit=0 and inspect Content-Range \u2014 simplified here\n    const list = await pgReq('GET', `/rest/v1/pedidos_pdf?select=id&limit=1`, null, { 'Prefer': 'count=exact' });\n    node.log(`[sync-pedidos-pdf-manual] Manual refresh invoked. Supabase pedidos_pdf lookup-status=${list.statusCode}`);\n    msg.statusCode = 200;\n    msg.payload = { ok: true, synced: false, created: 0, updated: 0, reason: 'sharepoint-mapping-not-implemented-dev-placeholder', logged: true };\n    return msg;\n} catch (err) {\n    node.error('[sync-pedidos-pdf-manual] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 60,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
+        ],
+        "x": 860,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pedpdf-manual-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-manual-out",
+        "type": "http response",
+        "z": "orc-tab-pedpdf-manual",
+        "name": "Response",
+        "statusCode": "",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "x": 1140,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "orc-pedpdf-manual-catch",
+        "type": "catch",
+        "z": "orc-tab-pedpdf-manual",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 160,
+        "y": 200,
+        "wires": [
+            [
+                "orc-pedpdf-manual-err"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-manual-err",
+        "type": "function",
+        "z": "orc-tab-pedpdf-manual",
+        "name": "Error Handler",
+        "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[sync-pedidos-pdf-manual] CATCH: ' + errMsg);\nmsg.statusCode = msg.statusCode || 500;\nmsg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nmsg.payload = { ok: false, error: 'Internal error', flow: 'sync-pedidos-pdf-manual', timestamp: new Date().toISOString() };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 200,
+        "wires": [
+            [
+                "orc-pedpdf-manual-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tab-pedpdf-onup",
+        "type": "tab",
+        "label": "Pedidos PDF - On Upload",
+        "disabled": false,
+        "info": "POST /orcamentos/pedidos-pdf/on-upload\n\nBody: SharePoint webhook notification payload, or Teams 'new channel message' event (legacy). Validation handshake: if ?validationtoken=<token> is present in query, returns raw token as text/plain (SP webhook verification protocol).\n\nPLACEHOLDER implementation. PA '(Pedidos em PDF) - Quando uma postagem e criada em novos pedidos, engatilhar dataflow' subscribes to Teams channel messages on group 1d638f3d-d39c-4b9a-b2bc-b5df8460f550 channel 19:29046801417c4c989b380920848c0b2e@thread.tacv2 and refreshes the same PA Dataflow. When migrated, this endpoint should: (a) handle SP webhook validation handshake (already implemented); (b) for each change-notification entry, invoke the core sync subflow. Currently returns placeholder ack. Kept as a public HTTP endpoint so external SP or Teams webhook provisioning can target it directly.\n"
+    },
+    {
+        "id": "orc-pedpdf-onup-in",
+        "type": "http in",
+        "z": "orc-tab-pedpdf-onup",
+        "name": "POST /orcamentos/pedidos-pdf/on-upload",
+        "url": "/orcamentos/pedidos-pdf/on-upload",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 200,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pedpdf-onup-validate"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-onup-validate",
+        "type": "function",
+        "z": "orc-tab-pedpdf-onup",
+        "name": "Validate Input",
+        "func": "const body = msg.payload || {};\n// SharePoint webhook payload shape (reference):\n//   { value: [ { subscriptionId, clientState, expirationDateTime, resource, tenantId, siteUrl, webId } ] }\n// Teams 'new channel message' payload (alternative trigger in original PA):\n//   { id, messageType, createdDateTime, from, body, ... }\n// This flow accepts any shape and acknowledges quickly to keep SP webhook healthy.\nmsg.webhookPayload = body;\n// SharePoint validation handshake: if ?validationtoken= is present in query, respond with raw token.\nconst q = (msg.req && msg.req.query) || {};\nif (q.validationtoken) {\n    msg.statusCode = 200;\n    msg.headers = { 'Content-Type': 'text/plain' };\n    msg.payload = String(q.validationtoken);\n    msg._validationHandshake = true;\n    return [null, msg];\n}\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pedpdf-onup-guard"
+            ],
+            [
+                "orc-pedpdf-onup-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-onup-guard",
+        "type": "function",
+        "z": "orc-tab-pedpdf-onup",
+        "name": "Env Guard",
+        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pedpdf-onup-exec"
+            ],
+            [
+                "orc-pedpdf-onup-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-onup-exec",
+        "type": "function",
+        "z": "orc-tab-pedpdf-onup",
+        "name": "Execute",
+        "func": "// PLACEHOLDER: PA '(Pedidos em PDF) - Quando uma postagem e criada em novos pedidos, engatilhar dataflow'\n// uses a Microsoft Teams 'When a new channel message is added' trigger on groupId 1d638f3d-d39c-4b9a-b2bc-b5df8460f550\n// channelId 19:29046801417c4c989b380920848c0b2e@thread.tacv2, and calls the same Dataflow refresh.\n// Since a Node-RED port cannot subscribe to Teams channel events without Graph webhook provisioning,\n// this endpoint is shaped to handle a generic webhook (SharePoint list webhook or custom HTTP ping).\n// It acknowledges fast to keep the caller healthy and logs the payload summary for debugging.\ntry {\n    const body = msg.webhookPayload || {};\n    const summary = {\n        hasValue: Array.isArray(body.value),\n        valueLength: Array.isArray(body.value) ? body.value.length : 0,\n        keys: typeof body === 'object' && body ? Object.keys(body).slice(0, 10) : []\n    };\n    node.log(`[sync-pedidos-pdf-on-upload] Webhook received: ${JSON.stringify(summary)}`);\n    msg.statusCode = 200;\n    msg.payload = { ok: true, notified: true, synced: false, reason: 'sharepoint-mapping-not-implemented-dev-placeholder', received: summary };\n    return msg;\n} catch (err) {\n    node.error('[sync-pedidos-pdf-on-upload] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 60,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pedpdf-onup-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-onup-out",
+        "type": "http response",
+        "z": "orc-tab-pedpdf-onup",
+        "name": "Response",
+        "statusCode": "",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "x": 1140,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "orc-pedpdf-onup-catch",
+        "type": "catch",
+        "z": "orc-tab-pedpdf-onup",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 160,
+        "y": 200,
+        "wires": [
+            [
+                "orc-pedpdf-onup-err"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pedpdf-onup-err",
+        "type": "function",
+        "z": "orc-tab-pedpdf-onup",
+        "name": "Error Handler",
+        "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[sync-pedidos-pdf-on-upload] CATCH: ' + errMsg);\nmsg.statusCode = msg.statusCode || 500;\nmsg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nmsg.payload = { ok: false, error: 'Internal error', flow: 'sync-pedidos-pdf-on-upload', timestamp: new Date().toISOString() };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 200,
+        "wires": [
+            [
+                "orc-pedpdf-onup-out"
+            ]
+        ]
     }
 ]
