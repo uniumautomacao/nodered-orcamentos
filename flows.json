@@ -542,7 +542,7 @@
         "type": "link out",
         "z": "orc-tab-credito-firmar",
         "name": "firmar-utilizacoes-done",
-        "mode": "link",
+        "mode": "return",
         "links": [],
         "x": 1300,
         "y": 120,
