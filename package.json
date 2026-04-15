@@ -1,0 +1,12 @@
+{
+    "name": "orcamentos",
+    "description": "Node-RED Orcamentos - Module F migration (Supabase). Flows for sales/orcamentos, crédito, clicksign, PDF, publicar pedido.",
+    "version": "0.0.1",
+    "dependencies": {},
+    "node-red": {
+        "settings": {
+            "flowFile": "flows.json",
+            "credentialsFile": "flows_cred.json"
+        }
+    }
+}
