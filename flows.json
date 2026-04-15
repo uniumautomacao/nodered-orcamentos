@@ -94,29 +94,6 @@
         "y": 80,
         "wires": [
             [
-                "orc-util-guard"
-            ],
-            [
-                "orc-util-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-util-guard",
-        "type": "function",
-        "z": "orc-tab-credito-utilizar",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
-        "y": 80,
-        "wires": [
-            [
                 "orc-util-exec"
             ],
             [
@@ -245,29 +222,6 @@
         "y": 80,
         "wires": [
             [
-                "orc-cancel-guard"
-            ],
-            [
-                "orc-cancel-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-cancel-guard",
-        "type": "function",
-        "z": "orc-tab-credito-cancelar",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
-        "y": 80,
-        "wires": [
-            [
                 "orc-cancel-exec"
             ],
             [
@@ -393,29 +347,6 @@
         "finalize": "",
         "libs": [],
         "x": 420,
-        "y": 80,
-        "wires": [
-            [
-                "orc-firmar-guard"
-            ],
-            [
-                "orc-firmar-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-firmar-guard",
-        "type": "function",
-        "z": "orc-tab-credito-firmar",
-        "name": "Env Guard (HTTP only)",
-        "func": "if (msg._source !== 'http') {\n    return [msg, null];\n}\nconst NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 660,
         "y": 80,
         "wires": [
             [
@@ -626,29 +557,6 @@
         "y": 80,
         "wires": [
             [
-                "orc-reemb-guard"
-            ],
-            [
-                "orc-reemb-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-reemb-guard",
-        "type": "function",
-        "z": "orc-tab-credito-reembolso",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
-        "y": 80,
-        "wires": [
-            [
                 "orc-reemb-exec"
             ],
             [
@@ -774,29 +682,6 @@
         "finalize": "",
         "libs": [],
         "x": 420,
-        "y": 80,
-        "wires": [
-            [
-                "orc-devol-guard"
-            ],
-            [
-                "orc-devol-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-devol-guard",
-        "type": "function",
-        "z": "orc-tab-credito-devolucao-os",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
         "y": 80,
         "wires": [
             [
@@ -928,29 +813,6 @@
         "y": 80,
         "wires": [
             [
-                "orc-notif-pedido-guard"
-            ],
-            [
-                "orc-notif-pedido-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-notif-pedido-guard",
-        "type": "function",
-        "z": "orc-tab-notif-pedido",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
-        "y": 80,
-        "wires": [
-            [
                 "orc-notif-pedido-exec"
             ],
             [
@@ -1076,29 +938,6 @@
         "finalize": "",
         "libs": [],
         "x": 420,
-        "y": 80,
-        "wires": [
-            [
-                "orc-item-sobre-guard"
-            ],
-            [
-                "orc-item-sobre-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-item-sobre-guard",
-        "type": "function",
-        "z": "orc-tab-item-sobre",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
         "y": 80,
         "wires": [
             [
@@ -1230,29 +1069,6 @@
         "y": 80,
         "wires": [
             [
-                "orc-desmembrar-guard"
-            ],
-            [
-                "orc-desmembrar-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-desmembrar-guard",
-        "type": "function",
-        "z": "orc-tab-desmembrar",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
-        "y": 80,
-        "wires": [
-            [
                 "orc-desmembrar-exec"
             ],
             [
@@ -1378,29 +1194,6 @@
         "finalize": "",
         "libs": [],
         "x": 420,
-        "y": 80,
-        "wires": [
-            [
-                "orc-pedpdf-sync-guard"
-            ],
-            [
-                "orc-pedpdf-sync-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-pedpdf-sync-guard",
-        "type": "function",
-        "z": "orc-tab-pedpdf-sync",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
         "y": 80,
         "wires": [
             [
@@ -1532,29 +1325,6 @@
         "y": 80,
         "wires": [
             [
-                "orc-pedpdf-manual-guard"
-            ],
-            [
-                "orc-pedpdf-manual-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-pedpdf-manual-guard",
-        "type": "function",
-        "z": "orc-tab-pedpdf-manual",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
-        "y": 80,
-        "wires": [
-            [
                 "orc-pedpdf-manual-exec"
             ],
             [
@@ -1683,29 +1453,6 @@
         "y": 80,
         "wires": [
             [
-                "orc-pedpdf-onup-guard"
-            ],
-            [
-                "orc-pedpdf-onup-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-pedpdf-onup-guard",
-        "type": "function",
-        "z": "orc-tab-pedpdf-onup",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
-        "y": 80,
-        "wires": [
-            [
                 "orc-pedpdf-onup-exec"
             ],
             [
@@ -1818,29 +1565,6 @@
         "finalize": "",
         "libs": [],
         "x": 420,
-        "y": 80,
-        "wires": [
-            [
-                "orc-pdf-up-guard"
-            ],
-            [
-                "orc-pdf-up-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-pdf-up-guard",
-        "type": "function",
-        "z": "orc-tab-pdf-upload-temp",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
         "y": 80,
         "wires": [
             [
@@ -1979,29 +1703,6 @@
         "y": 80,
         "wires": [
             [
-                "orc-pdf-plot-orc-guard"
-            ],
-            [
-                "orc-pdf-plot-orc-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-pdf-plot-orc-guard",
-        "type": "function",
-        "z": "orc-tab-pdf-plotar-orc",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
-        "y": 80,
-        "wires": [
-            [
                 "orc-pdf-plot-orc-exec"
             ],
             [
@@ -2127,29 +1828,6 @@
         "finalize": "",
         "libs": [],
         "x": 460,
-        "y": 80,
-        "wires": [
-            [
-                "orc-pdf-plot-guia-guard"
-            ],
-            [
-                "orc-pdf-plot-guia-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-pdf-plot-guia-guard",
-        "type": "function",
-        "z": "orc-tab-pdf-plotar-guia",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 680,
         "y": 80,
         "wires": [
             [
@@ -2281,29 +1959,6 @@
         "y": 80,
         "wires": [
             [
-                "orc-pdf-mtmp-guard"
-            ],
-            [
-                "orc-pdf-mtmp-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-pdf-mtmp-guard",
-        "type": "function",
-        "z": "orc-tab-pdf-merge-temp",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
-        "y": 80,
-        "wires": [
-            [
                 "orc-pdf-mtmp-exec"
             ],
             [
@@ -2419,29 +2074,6 @@
         "y": 80,
         "wires": [
             [
-                "orc-pdf-memail-guard"
-            ],
-            [
-                "orc-pdf-memail-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-pdf-memail-guard",
-        "type": "function",
-        "z": "orc-tab-pdf-merge-email",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 680,
-        "y": 80,
-        "wires": [
-            [
                 "orc-pdf-memail-exec"
             ],
             [
@@ -2554,29 +2186,6 @@
         "finalize": "",
         "libs": [],
         "x": 420,
-        "y": 80,
-        "wires": [
-            [
-                "orc-pdf-impr-guard"
-            ],
-            [
-                "orc-pdf-impr-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-pdf-impr-guard",
-        "type": "function",
-        "z": "orc-tab-pdf-imprimir",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 640,
         "y": 80,
         "wires": [
             [
@@ -2713,29 +2322,6 @@
         "finalize": "",
         "libs": [],
         "x": 440,
-        "y": 100,
-        "wires": [
-            [
-                "orc-pdf-clean-guard"
-            ],
-            [
-                "orc-pdf-clean-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-pdf-clean-guard",
-        "type": "function",
-        "z": "orc-tab-pdf-cleanup",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    // HTTP callers get a 403 response; timer calls just stop silently\n    if (msg._source === 'http') {\n        msg.statusCode = 403;\n        msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n        return [null, msg];\n    }\n    node.log('[pdf-cleanup-cache] timer tick skipped in ' + NR_ENV + ' env');\n    return [null, null];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 660,
         "y": 100,
         "wires": [
             [
@@ -3023,27 +2609,6 @@
         "y": 80,
         "wires": [
             [
-                "orc-cs-comp-guard"
-            ],
-            [
-                "orc-cs-comp-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-cs-comp-guard",
-        "type": "function",
-        "z": "orc-tab-cs-enviar-comp",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "libs": [],
-        "x": 700,
-        "y": 80,
-        "wires": [
-            [
                 "orc-cs-comp-prep"
             ],
             [
@@ -3313,27 +2878,6 @@
         "y": 80,
         "wires": [
             [
-                "orc-cs-rec-guard"
-            ],
-            [
-                "orc-cs-rec-out"
-            ]
-        ]
-    },
-    {
-        "id": "orc-cs-rec-guard",
-        "type": "function",
-        "z": "orc-tab-cs-enviar-rec",
-        "name": "Env Guard",
-        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "libs": [],
-        "x": 700,
-        "y": 80,
-        "wires": [
-            [
                 "orc-cs-rec-prep"
             ],
             [
@@ -3477,30 +3021,7 @@
         "y": 80,
         "wires": [
             [
-                "orc-pub-env-guard"
-            ]
-        ]
-    },
-    {
-        "id": "orc-pub-env-guard",
-        "type": "function",
-        "z": "orc-tab-publicar-pedido",
-        "name": "Env Guard",
-        "func": "const nodeEnv = env.get('NODE_RED_ENV') || 'dev';\nif (nodeEnv !== 'dev' && nodeEnv !== 'prod') {\n    msg.statusCode = 503;\n    msg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\n    msg.payload = { ok: false, error: 'Service unavailable in this environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
-        "outputs": 2,
-        "timeout": 0,
-        "noerr": 0,
-        "initialize": "",
-        "finalize": "",
-        "libs": [],
-        "x": 400,
-        "y": 80,
-        "wires": [
-            [
                 "orc-pub-validate"
-            ],
-            [
-                "orc-pub-err-out"
             ]
         ]
     },
