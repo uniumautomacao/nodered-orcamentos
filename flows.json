@@ -3454,5 +3454,611 @@
                 "orc-cs-rec-out"
             ]
         ]
+    },
+    {
+        "id": "orc-tab-publicar-pedido",
+        "type": "tab",
+        "label": "Publicar Pedido",
+        "disabled": false,
+        "info": "POST /orcamentos/publicar-pedido\n\nInput: { projetoId?, clienteId, pedidoPdfId, orcamentoId, novoDescritivo?, urlDescritivo?, descricaoOsPti? }\n\nLogic (PA port: '(Orçamento) - Publicar Pedido', workflowid 141a46bd-37d4-f011-8544-000d3ac17330):\n1. Validate UUIDs (projetoId optional; rest required)\n2. GET orcamento (select desconto_percentual, sem_instalacao, consultor_id)\n3. GET pedido_pdf (existence check)\n4. LIST itens_de_orcamento (filter: removido=false, e_devolucao=false, opcao_de_fornecimento in (100000000,100000001,100000002))\n5. For each item: PATCH with custo_de_compra_fixado, valor_final_negociado, valor_final_negociado_de_servico (calculation mirrors PA)\n6. Call subflow firmar-utilizacoes-internal (link call)\n7. PATCH orcamento (pedido_pdf_id, projeto_id) — does NOT set publicado/data_publicacao (PA doesn't either)\n8. PATCH pedido_pdf (orcamento_id)\n9. If projetoId: Upsert OS PTI (tipo_de_servico=100000005) via PostgREST — append novo descritivo to descricao if novoDescritivo=true\n10. Call link-out into transformar-em-os → receives osIds\n11. Return { ok, orcamentoId, pedidoPdfId, osIds, osPtiId? }\n\nIdempotency: step 5 (PATCH itens) and step 9 (upsert OS PTI by project+tipo) are idempotent; step 10 (transformar-em-os) is idempotent (checks existing OS by projeto+tipo_de_servico).\n\nNotes on schema gaps vs PA:\n- ordens_de_servico has no orcamento_id column → PTI lookup uses projeto_id + tipo_de_servico (matches PA)\n- ordens_de_servico has no url_para_obter_arquivos/dias_para_conclusao/publicado_por/data_de_publicacao → novoDescritivo only updates descricao field"
+    },
+    {
+        "id": "orc-pub-in",
+        "type": "http in",
+        "z": "orc-tab-publicar-pedido",
+        "name": "POST /orcamentos/publicar-pedido",
+        "url": "/orcamentos/publicar-pedido",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 170,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pub-env-guard"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-env-guard",
+        "type": "function",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Env Guard",
+        "func": "const nodeEnv = env.get('NODE_RED_ENV') || 'dev';\nif (nodeEnv !== 'dev' && nodeEnv !== 'prod') {\n    msg.statusCode = 503;\n    msg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\n    msg.payload = { ok: false, error: 'Service unavailable in this environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pub-validate"
+            ],
+            [
+                "orc-pub-err-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-validate",
+        "type": "function",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Validate Input",
+        "func": "const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst body = msg.payload || {};\nconst projetoId = body.projetoId || body.projetoid || null;\nconst clienteId = body.clienteId || body.clienteid;\nconst pedidoPdfId = body.pedidoPdfId || body.pedidopdfid;\nconst orcamentoId = body.orcamentoId || body.orcamentoid;\nconst novoDescritivo = body.novoDescritivo === true || body.novoDescritivo === 'true';\nconst urlDescritivo = typeof body.urlDescritivo === 'string' ? body.urlDescritivo : '';\nconst descricaoOsPti = typeof body.descricaoOsPti === 'string' ? body.descricaoOsPti : '';\n\nfunction bad(e) {\n    msg.statusCode = 400;\n    msg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\n    msg.payload = { ok: false, error: e };\n    return [null, msg];\n}\n\nif (!clienteId || !UUID_RE.test(clienteId)) return bad('clienteId must be a valid UUID');\nif (!pedidoPdfId || !UUID_RE.test(pedidoPdfId)) return bad('pedidoPdfId must be a valid UUID');\nif (!orcamentoId || !UUID_RE.test(orcamentoId)) return bad('orcamentoId must be a valid UUID');\nif (projetoId && !UUID_RE.test(projetoId)) return bad('projetoId must be a valid UUID when provided');\n// Validate urlDescritivo is http(s) or empty\nif (urlDescritivo && !/^https?:\\/\\//i.test(urlDescritivo)) return bad('urlDescritivo must be http(s) URL when provided');\n// Cap descricaoOsPti length\nif (descricaoOsPti.length > 5000) return bad('descricaoOsPti too long (max 5000 chars)');\n\nmsg.projetoId = projetoId;\nmsg.clienteId = clienteId;\nmsg.pedidoPdfId = pedidoPdfId;\nmsg.orcamentoId = orcamentoId;\nmsg.novoDescritivo = novoDescritivo;\nmsg.urlDescritivo = urlDescritivo;\nmsg.descricaoOsPti = descricaoOsPti;\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 620,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pub-exec"
+            ],
+            [
+                "orc-pub-err-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-exec",
+        "type": "function",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Execute Publicar Pedido",
+        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst { orcamentoId, pedidoPdfId, clienteId, projetoId, novoDescritivo, urlDescritivo, descricaoOsPti } = msg;\nconst encOrc = encodeURIComponent(orcamentoId);\nconst encPed = encodeURIComponent(pedidoPdfId);\n\ntry {\n    // Step 2: GET orcamento\n    const orcRes = await pgReq('GET', `/rest/v1/orcamentos?id=eq.${encOrc}&select=id,desconto_percentual,sem_instalacao,consultor_id`, null);\n    if (orcRes.statusCode !== 200 || !Array.isArray(orcRes.body) || orcRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: 'Orcamento not found' };\n        return msg;\n    }\n    const orc = orcRes.body[0];\n    const desconto = Number(orc.desconto_percentual) || 0;\n    const semInstalacao = !!orc.sem_instalacao;\n\n    // Step 3: GET pedido_pdf\n    const pedRes = await pgReq('GET', `/rest/v1/pedidos_pdf?id=eq.${encPed}&select=id`, null);\n    if (pedRes.statusCode !== 200 || !Array.isArray(pedRes.body) || pedRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: 'Pedido PDF not found' };\n        return msg;\n    }\n\n    // Step 4: LIST itens\n    const itensRes = await pgReq('GET', `/rest/v1/itens_de_orcamento?orcamento_id=eq.${encOrc}&removido=eq.false&e_devolucao=eq.false&opcao_de_fornecimento=in.(100000000,100000001,100000002)&select=id,valor_de_produto,valor_de_servico,custo_de_compra,opcao_de_fornecimento,quantidade`, null);\n    if (itensRes.statusCode !== 200) {\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: `Failed to list itens: HTTP ${itensRes.statusCode}` };\n        node.error('[publicar-pedido] list itens failed: ' + itensRes.statusCode + ' ' + JSON.stringify(itensRes.body), msg);\n        return msg;\n    }\n    const itens = Array.isArray(itensRes.body) ? itensRes.body : [];\n\n    // Step 5: PATCH each item with calculated values\n    // PA formulas (from clientdata):\n    //   custo_de_compra_fixado = item.custo_de_compra (copy)\n    //   valor_final_negociado = (opcao_de_fornecimento == 100000000) ? valor_de_produto * (1 - desconto) : 0\n    //   valor_final_negociado_de_servico = sem_instalacao ? 0 : valor_de_servico * (1 - desconto)\n    // NOTE: PA uses 'desconto' as fraction (e.g. 0.1 = 10%). Schema stores as decimal (0-1 range).\n    let patchedCount = 0;\n    for (const item of itens) {\n        const op = Number(item.opcao_de_fornecimento) || 0;\n        const vp = Number(item.valor_de_produto) || 0;\n        const vs = Number(item.valor_de_servico) || 0;\n        const cc = Number(item.custo_de_compra) || 0;\n        const valorFinalNeg = op === 100000000 ? (vp * (1 - desconto)) : 0;\n        const valorFinalServ = semInstalacao ? 0 : (vs * (1 - desconto));\n        const itemBody = {\n            custo_de_compra_fixado: cc,\n            valor_final_negociado: valorFinalNeg,\n            valor_final_negociado_de_servico: valorFinalServ\n        };\n        const encItem = encodeURIComponent(item.id);\n        const patchRes = await pgReq('PATCH', `/rest/v1/itens_de_orcamento?id=eq.${encItem}`, itemBody, { 'Prefer': 'return=minimal' });\n        if (patchRes.statusCode >= 200 && patchRes.statusCode < 300) {\n            patchedCount++;\n        } else {\n            node.warn('[publicar-pedido] failed to patch item ' + item.id + ': HTTP ' + patchRes.statusCode);\n        }\n    }\n\n    // Step 6: Save data for link-out chain (firmar + transformar)\n    msg._publicar = {\n        orcamentoId,\n        pedidoPdfId,\n        clienteId,\n        projetoId,\n        novoDescritivo,\n        urlDescritivo,\n        descricaoOsPti,\n        itensPatchedCount: patchedCount,\n        orcDesconto: desconto,\n        orcSemInstalacao: semInstalacao\n    };\n    msg.orcamentoId = orcamentoId; // For link-in validators\n    return msg;\n} catch (err) {\n    node.error('[publicar-pedido] exec error: ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 180,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
+        ],
+        "x": 880,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pub-check-early-err"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-check-early-err",
+        "type": "switch",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Has error?",
+        "property": "payload.ok",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "false"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 1130,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pub-out"
+            ],
+            [
+                "orc-pub-call-firmar"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-call-firmar",
+        "type": "link call",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Call Firmar Utilizacoes",
+        "links": [
+            "orc-firmar-link-in"
+        ],
+        "linkType": "static",
+        "timeout": "60",
+        "x": 210,
+        "y": 180,
+        "wires": [
+            [
+                "orc-pub-after-firmar"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-after-firmar",
+        "type": "function",
+        "z": "orc-tab-publicar-pedido",
+        "name": "After Firmar - Update Orc+Pedido",
+        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst pub = msg._publicar;\nconst { orcamentoId, pedidoPdfId, projetoId } = pub;\nconst encOrc = encodeURIComponent(orcamentoId);\nconst encPed = encodeURIComponent(pedidoPdfId);\n\ntry {\n    // Step 7: PATCH orcamento with pedido_pdf_id + projeto_id (PA does NOT set publicado/data_publicacao)\n    const orcBody = { pedido_pdf_id: pedidoPdfId };\n    if (projetoId) orcBody.projeto_id = projetoId;\n    const orcRes = await pgReq('PATCH', `/rest/v1/orcamentos?id=eq.${encOrc}`, orcBody, { 'Prefer': 'return=minimal' });\n    if (orcRes.statusCode < 200 || orcRes.statusCode >= 300) {\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: `Failed to update orcamento: HTTP ${orcRes.statusCode}` };\n        node.error('[publicar-pedido] update orcamento failed: ' + orcRes.statusCode + ' ' + JSON.stringify(orcRes.body), msg);\n        return msg;\n    }\n\n    // Step 8: PATCH pedido_pdf with orcamento_id (idempotent — overwrite OK)\n    const pedBody = { orcamento_id: orcamentoId };\n    const pedRes = await pgReq('PATCH', `/rest/v1/pedidos_pdf?id=eq.${encPed}`, pedBody, { 'Prefer': 'return=minimal' });\n    if (pedRes.statusCode < 200 || pedRes.statusCode >= 300) {\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: `Failed to update pedido_pdf: HTTP ${pedRes.statusCode}` };\n        node.error('[publicar-pedido] update pedido_pdf failed: ' + pedRes.statusCode, msg);\n        return msg;\n    }\n\n    msg._publicar = pub; // preserve\n    return msg;\n} catch (err) {\n    node.error('[publicar-pedido] after-firmar error: ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 60,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
+        ],
+        "x": 560,
+        "y": 180,
+        "wires": [
+            [
+                "orc-pub-check-post-firmar"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-check-post-firmar",
+        "type": "switch",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Has error?",
+        "property": "payload.ok",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "false"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 870,
+        "y": 180,
+        "wires": [
+            [
+                "orc-pub-out"
+            ],
+            [
+                "orc-pub-os-pti"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-os-pti",
+        "type": "function",
+        "z": "orc-tab-publicar-pedido",
+        "name": "OS PTI Upsert (if projeto)",
+        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst pub = msg._publicar;\nconst { projetoId, clienteId, novoDescritivo, descricaoOsPti } = pub;\n\n// If no project, skip PTI upsert\nif (!projetoId) {\n    pub.osPtiId = null;\n    msg._publicar = pub;\n    return msg;\n}\n\nconst encProjeto = encodeURIComponent(projetoId);\n\ntry {\n    // Query for existing PTI OS (tipo_de_servico=100000005, by project, statecode=0)\n    // Mirrors PA: ordering by createdon desc, top 1\n    const listRes = await pgReq('GET', `/rest/v1/ordens_de_servico?projeto_id=eq.${encProjeto}&tipo_de_servico=eq.100000005&state_code=eq.0&select=id,descricao&order=created_at.desc&limit=1`, null);\n    if (listRes.statusCode !== 200) {\n        // Not a fatal error — log and continue\n        node.warn('[publicar-pedido] OS PTI lookup failed: HTTP ' + listRes.statusCode + ' — skipping PTI upsert');\n        pub.osPtiId = null;\n        msg._publicar = pub;\n        return msg;\n    }\n    const existing = Array.isArray(listRes.body) ? listRes.body : [];\n    let osPtiId = null;\n    let currentDescricao = '';\n\n    if (existing.length > 0) {\n        // Update cliente_id + projeto_id (idempotent)\n        osPtiId = existing[0].id;\n        currentDescricao = existing[0].descricao || '';\n        const encOsId = encodeURIComponent(osPtiId);\n        const upBody = { cliente_id: clienteId, projeto_id: projetoId };\n        const upRes = await pgReq('PATCH', `/rest/v1/ordens_de_servico?id=eq.${encOsId}`, upBody, { 'Prefer': 'return=minimal' });\n        if (upRes.statusCode < 200 || upRes.statusCode >= 300) {\n            node.warn('[publicar-pedido] OS PTI update failed: HTTP ' + upRes.statusCode);\n        }\n    } else {\n        // Create new OS PTI\n        const createBody = { cliente_id: clienteId, projeto_id: projetoId, tipo_de_servico: 100000005 };\n        const createRes = await pgReq('POST', '/rest/v1/ordens_de_servico', createBody, { 'Prefer': 'return=representation' });\n        if (createRes.statusCode >= 200 && createRes.statusCode < 300 && Array.isArray(createRes.body) && createRes.body.length > 0) {\n            osPtiId = createRes.body[0].id;\n            currentDescricao = createRes.body[0].descricao || '';\n        } else {\n            node.warn('[publicar-pedido] OS PTI create failed: HTTP ' + createRes.statusCode + ' — continuing');\n        }\n    }\n\n    // If novoDescritivo: append to descricao (PA also sets url_para_obter_arquivos, dias_para_conclusao, publicado_por, data_de_publicacao, but those columns don't exist in Supabase)\n    if (osPtiId && novoDescritivo && descricaoOsPti) {\n        const encOsId = encodeURIComponent(osPtiId);\n        const now = new Date();\n        const tsStr = now.toISOString().slice(0, 16).replace('T', ' ');\n        const newDescr = (currentDescricao ? currentDescricao + '\\n-----------------------------------------------\\n' : '') + descricaoOsPti + '\\nAtualização ' + tsStr;\n        const upBody = { descricao: newDescr };\n        const upRes = await pgReq('PATCH', `/rest/v1/ordens_de_servico?id=eq.${encOsId}`, upBody, { 'Prefer': 'return=minimal' });\n        if (upRes.statusCode < 200 || upRes.statusCode >= 300) {\n            node.warn('[publicar-pedido] OS PTI descritivo update failed: HTTP ' + upRes.statusCode);\n        }\n    }\n\n    pub.osPtiId = osPtiId;\n    msg._publicar = pub;\n    return msg;\n} catch (err) {\n    node.error('[publicar-pedido] OS PTI error: ' + (err && err.message), msg);\n    pub.osPtiId = null;\n    msg._publicar = pub;\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 60,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
+        ],
+        "x": 270,
+        "y": 280,
+        "wires": [
+            [
+                "orc-pub-call-transformar"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-call-transformar",
+        "type": "link call",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Call Transformar em OS",
+        "links": [
+            "orc-tos-link-in"
+        ],
+        "linkType": "static",
+        "timeout": "300",
+        "x": 570,
+        "y": 280,
+        "wires": [
+            [
+                "orc-pub-final"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-final",
+        "type": "function",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Build Final Response",
+        "func": "const pub = msg._publicar || {};\nconst osIds = (msg.payload && Array.isArray(msg.payload.osIds)) ? msg.payload.osIds : [];\n\n// Fire-and-forget: call /orcamentos/notificar-novo-pedido internally\n// This is a placeholder flow (logs only) — safe to call best-effort\ntry {\n    const localUrl = 'http://127.0.0.1:' + (env.get('NR_INTERNAL_PORT') || '1899') + '/orcamentos/notificar-novo-pedido';\n    const body = JSON.stringify({ orcamentoid: pub.orcamentoId });\n    const req = nodeHttp.request(localUrl, {\n        method: 'POST',\n        headers: {\n            'Content-Type': 'application/json',\n            'Content-Length': Buffer.byteLength(body)\n        },\n        timeout: 5000\n    }, (res) => {\n        // drain response body to free socket\n        res.on('data', () => {});\n        res.on('end', () => {});\n    });\n    req.on('error', (e) => { node.warn('[publicar-pedido] notificar fire-and-forget error: ' + e.message); });\n    req.on('timeout', () => { req.destroy(); });\n    req.write(body);\n    req.end();\n} catch (e) {\n    node.warn('[publicar-pedido] notificar fire-and-forget exception: ' + e.message);\n}\n\nmsg.statusCode = 200;\nmsg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nmsg.payload = {\n    ok: true,\n    orcamentoId: pub.orcamentoId,\n    pedidoPdfId: pub.pedidoPdfId,\n    osIds: osIds,\n    osPtiId: pub.osPtiId || null,\n    itensPatchedCount: pub.itensPatchedCount || 0,\n    publicadoEm: new Date().toISOString()\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            }
+        ],
+        "x": 830,
+        "y": 280,
+        "wires": [
+            [
+                "orc-pub-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-out",
+        "type": "http response",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Response",
+        "statusCode": "",
+        "headers": {},
+        "x": 1060,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "orc-pub-err-out",
+        "type": "http response",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Error Response",
+        "statusCode": "",
+        "headers": {},
+        "x": 1060,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "orc-pub-catch",
+        "type": "catch",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 150,
+        "y": 380,
+        "wires": [
+            [
+                "orc-pub-err-handler"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-err-handler",
+        "type": "function",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Error Handler",
+        "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[publicar-pedido] CATCH: ' + errMsg);\nmsg.statusCode = msg.statusCode || 500;\nmsg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nmsg.payload = { ok: false, error: 'Internal error' };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 380,
+        "y": 380,
+        "wires": [
+            [
+                "orc-pub-err-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tab-transformar-os",
+        "type": "tab",
+        "label": "Transformar em OS",
+        "disabled": false,
+        "info": "POST /orcamentos/transformar-em-os\n\nInput: { orcamentoId } (HTTP body) OR msg.orcamentoId (link call from publicar-pedido)\n\nLogic (PA port: '(Orçamento) - Transformar orçamento em ordens de serviço', workflowid 802801d8-cdb3-ef11-b8e8-002248e11254):\n1. GET orcamento (select id, cliente_id, projeto_id, pedido_pdf_id)\n2. LIST itens (filter: removido=false, opcao_de_fornecimento in (100000000, 100000002), state_code=0, produto_id not null)\n3. Extract distinct tipo_de_os_padrao from itens\n4. For each tipo:\n   a. If project: GET existing OS by projeto_id + tipo_de_servico + state_code=0 + concluido=false (concluido is computed, skipped — use state_code only)\n   b. If none found OR no project: POST new OS with cliente_id, projeto_id, tipo_de_servico=tipo\n   c. Append osid to array\n5. For each OS and matching item (by tipo_de_os_padrao == tipo_de_servico):\n   a. GET precos_de_produto (modelo_id)\n   b. If modelo_id exists: POST new produtos_servico\n6. Return { ok, osIds }\n\nNotes on schema gaps vs PA:\n- No new_pedidooses table → skip creation of pedido↔os link (schema gap, logged as warning)\n- ordens_de_servico has no orcamento_id → OS lookup by project+tipo (for project-linked orcamentos) OR always-create (for non-project orcamentos)\n- produtos_servico has no item_de_orcamento_id/valor_final_negociado/preco_de_produto_id columns → map item quantity, localizacao (ambiente), opcao_fornecimento + produto_id = modelo_id\n- Subflows deletar-prod-os-vazios, agrupar-produtos: not yet migrated — skipped (logged)\n\nIdempotency: step 4 checks existing OS before creating; step 5 will duplicate produtos_servico on re-run (schema has no unique constraint by item+OS). Current impl: fetch existing produtos_servico for OS with item-ref markers absent, so duplicates may occur on re-run. Acceptable for MVP — user should not call twice."
+    },
+    {
+        "id": "orc-tos-in",
+        "type": "http in",
+        "z": "orc-tab-transformar-os",
+        "name": "POST /orcamentos/transformar-em-os",
+        "url": "/orcamentos/transformar-em-os",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 180,
+        "y": 80,
+        "wires": [
+            [
+                "orc-tos-from-http"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tos-from-http",
+        "type": "function",
+        "z": "orc-tab-transformar-os",
+        "name": "From HTTP",
+        "func": "msg._source = 'http';\nconst body = msg.payload || {};\nmsg.orcamentoId = body.orcamentoId || body.orcamentoid || msg.orcamentoId;\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 80,
+        "wires": [
+            [
+                "orc-tos-env-guard"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tos-link-in",
+        "type": "link in",
+        "z": "orc-tab-transformar-os",
+        "name": "transformar-em-os-internal",
+        "links": [],
+        "x": 200,
+        "y": 160,
+        "wires": [
+            [
+                "orc-tos-from-link"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tos-from-link",
+        "type": "function",
+        "z": "orc-tab-transformar-os",
+        "name": "From Link",
+        "func": "msg._source = 'link';\n// orcamentoId already set by caller; fallback to _publicar.orcamentoId if needed\nif (!msg.orcamentoId && msg._publicar && msg._publicar.orcamentoId) {\n    msg.orcamentoId = msg._publicar.orcamentoId;\n}\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 160,
+        "wires": [
+            [
+                "orc-tos-env-guard"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tos-env-guard",
+        "type": "function",
+        "z": "orc-tab-transformar-os",
+        "name": "Env Guard",
+        "func": "const nodeEnv = env.get('NODE_RED_ENV') || 'dev';\nif (nodeEnv !== 'dev' && nodeEnv !== 'prod') {\n    if (msg._source === 'http') {\n        msg.statusCode = 503;\n        msg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\n        msg.payload = { ok: false, error: 'Service unavailable in this environment' };\n        return [null, msg];\n    } else {\n        node.warn('[transformar-em-os] env guard blocked link call');\n        msg.payload = { ok: false, error: 'Environment blocked', osIds: [] };\n        return [null, msg]; // In link-call case, we still want to return osIds:[]\n    }\n}\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 120,
+        "wires": [
+            [
+                "orc-tos-validate"
+            ],
+            [
+                "orc-tos-decide-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tos-validate",
+        "type": "function",
+        "z": "orc-tab-transformar-os",
+        "name": "Validate Input",
+        "func": "const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst orcamentoId = msg.orcamentoId;\nif (!orcamentoId || !UUID_RE.test(orcamentoId)) {\n    if (msg._source === 'link') node.error('transformar-em-os: orcamentoId missing or invalid', msg);\n    msg.statusCode = 400;\n    msg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\n    msg.payload = { ok: false, error: 'orcamentoId must be a valid UUID', osIds: [] };\n    return [null, msg];\n}\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 870,
+        "y": 120,
+        "wires": [
+            [
+                "orc-tos-exec"
+            ],
+            [
+                "orc-tos-decide-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tos-exec",
+        "type": "function",
+        "z": "orc-tab-transformar-os",
+        "name": "Execute Transformar",
+        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\n    msg.payload = { ok: false, error: 'Server misconfigured', osIds: [] };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst orcamentoId = msg.orcamentoId;\nconst encOrc = encodeURIComponent(orcamentoId);\n\ntry {\n    // Step 1: GET orcamento\n    const orcRes = await pgReq('GET', `/rest/v1/orcamentos?id=eq.${encOrc}&select=id,cliente_id,projeto_id,pedido_pdf_id`, null);\n    if (orcRes.statusCode !== 200 || !Array.isArray(orcRes.body) || orcRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: 'Orcamento not found', osIds: [] };\n        return msg;\n    }\n    const orc = orcRes.body[0];\n    const clienteId = orc.cliente_id;\n    const projetoId = orc.projeto_id;\n    const pedidoPdfId = orc.pedido_pdf_id;\n\n    // Step 2: LIST itens (opcao_de_fornecimento in (100000000, 100000002), produto_id not null, state_code=0)\n    const itensRes = await pgReq('GET', `/rest/v1/itens_de_orcamento?orcamento_id=eq.${encOrc}&removido=eq.false&state_code=eq.0&opcao_de_fornecimento=in.(100000000,100000002)&produto_id=not.is.null&select=id,tipo_de_os_padrao,opcao_de_fornecimento,quantidade,ambiente,produto_id`, null);\n    if (itensRes.statusCode !== 200) {\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: `Failed to list itens: HTTP ${itensRes.statusCode}`, osIds: [] };\n        node.error('[transformar-em-os] list itens failed: ' + itensRes.statusCode, msg);\n        return msg;\n    }\n    const itens = Array.isArray(itensRes.body) ? itensRes.body : [];\n\n    if (itens.length === 0) {\n        msg.statusCode = 200;\n        msg.payload = { ok: true, osIds: [], note: 'No eligible items' };\n        return msg;\n    }\n\n    // Step 3: Distinct tipos\n    const tiposSet = new Set();\n    for (const item of itens) {\n        if (item.tipo_de_os_padrao !== null && item.tipo_de_os_padrao !== undefined) {\n            tiposSet.add(item.tipo_de_os_padrao);\n        }\n    }\n    const tipos = Array.from(tiposSet);\n\n    // Step 4: For each tipo — find/create OS (sequential to match PA concurrency: 1)\n    const osIds = [];\n    for (const tipo of tipos) {\n        let osId = null;\n        if (projetoId) {\n            // Look for existing OS: projeto_id + tipo_de_servico + state_code=0\n            // PA also has 'new_concluido ne true' — concluido is computed; skip that filter (state_code=0 is primary)\n            const encProjeto = encodeURIComponent(projetoId);\n            const listOsRes = await pgReq('GET', `/rest/v1/ordens_de_servico?projeto_id=eq.${encProjeto}&tipo_de_servico=eq.${tipo}&state_code=eq.0&concluido=eq.false&select=id&order=created_at.asc&limit=1`, null);\n            if (listOsRes.statusCode === 200 && Array.isArray(listOsRes.body) && listOsRes.body.length > 0) {\n                osId = listOsRes.body[0].id;\n            }\n        }\n        if (!osId) {\n            // Create new OS\n            const createBody = {\n                cliente_id: clienteId,\n                tipo_de_servico: tipo\n            };\n            if (projetoId) createBody.projeto_id = projetoId;\n            const createRes = await pgReq('POST', '/rest/v1/ordens_de_servico', createBody, { 'Prefer': 'return=representation' });\n            if (createRes.statusCode < 200 || createRes.statusCode >= 300 || !Array.isArray(createRes.body) || createRes.body.length === 0) {\n                node.error('[transformar-em-os] OS create failed for tipo ' + tipo + ': HTTP ' + createRes.statusCode + ' ' + JSON.stringify(createRes.body), msg);\n                continue;\n            }\n            osId = createRes.body[0].id;\n        }\n        osIds.push(osId);\n\n        // Skip pedidos_os creation — table not migrated to Supabase (schema gap from PA)\n        if (pedidoPdfId) {\n            node.warn('[transformar-em-os] pedidos_os table not migrated; skipping link for OS ' + osId + ' -> pedido ' + pedidoPdfId);\n        }\n    }\n\n    // Step 5: For each OS — create produtos_servico\n    // Group items by tipo for efficiency\n    const itensByTipo = {};\n    for (const item of itens) {\n        const t = item.tipo_de_os_padrao;\n        if (!itensByTipo[t]) itensByTipo[t] = [];\n        itensByTipo[t].push(item);\n    }\n\n    for (let i = 0; i < osIds.length; i++) {\n        const osId = osIds[i];\n        const tipo = tipos[i];\n        const itemsForTipo = itensByTipo[tipo] || [];\n        for (const item of itemsForTipo) {\n            // GET preco_de_produto (by item.produto_id; produto_id points to precos_de_produto.id)\n            if (!item.produto_id) continue;\n            const encProd = encodeURIComponent(item.produto_id);\n            const precoRes = await pgReq('GET', `/rest/v1/precos_de_produto?id=eq.${encProd}&select=id,modelo_id`, null);\n            if (precoRes.statusCode !== 200 || !Array.isArray(precoRes.body) || precoRes.body.length === 0) {\n                node.warn('[transformar-em-os] preco not found for item ' + item.id + ' produto_id=' + item.produto_id);\n                continue;\n            }\n            const modeloId = precoRes.body[0].modelo_id;\n            if (!modeloId) {\n                // PA: 'length(modelo_value) > 1' check — skip if no modelo\n                continue;\n            }\n            // Create produtos_servico\n            const psBody = {\n                ordem_de_servico_id: osId,\n                produto_id: modeloId,\n                quantidade: item.quantidade,\n                opcao_fornecimento: item.opcao_de_fornecimento,\n                localizacao: item.ambiente ? String(item.ambiente).trim() : null\n            };\n            const psRes = await pgReq('POST', '/rest/v1/produtos_servico', psBody, { 'Prefer': 'return=minimal' });\n            if (psRes.statusCode < 200 || psRes.statusCode >= 300) {\n                node.warn('[transformar-em-os] produtos_servico create failed: HTTP ' + psRes.statusCode + ' (OS=' + osId + ', item=' + item.id + ')');\n            }\n        }\n\n        // Subflows deletar-prod-os-vazios + agrupar-produtos: not migrated yet\n        // TODO: call when available\n        node.warn('[transformar-em-os] subflows deletar-prod-os-vazios + agrupar-produtos not migrated; skipping for OS ' + osId);\n    }\n\n    msg.statusCode = 200;\n    msg.payload = { ok: true, osIds: osIds, tiposCount: tipos.length, itensCount: itens.length };\n    return msg;\n} catch (err) {\n    node.error('[transformar-em-os] exec error: ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error', osIds: [] };\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 300,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
+        ],
+        "x": 1120,
+        "y": 120,
+        "wires": [
+            [
+                "orc-tos-decide-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tos-decide-out",
+        "type": "switch",
+        "z": "orc-tab-transformar-os",
+        "name": "HTTP or Link?",
+        "property": "_source",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "http",
+                "vt": "str"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 270,
+        "y": 280,
+        "wires": [
+            [
+                "orc-tos-http-out"
+            ],
+            [
+                "orc-tos-link-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tos-http-out",
+        "type": "function",
+        "z": "orc-tab-transformar-os",
+        "name": "Set Headers",
+        "func": "msg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 480,
+        "y": 260,
+        "wires": [
+            [
+                "orc-tos-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tos-out",
+        "type": "http response",
+        "z": "orc-tab-transformar-os",
+        "name": "Response",
+        "statusCode": "",
+        "headers": {},
+        "x": 680,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "orc-tos-link-out",
+        "type": "link out",
+        "z": "orc-tab-transformar-os",
+        "name": "Return to caller",
+        "mode": "return",
+        "links": [],
+        "x": 480,
+        "y": 320,
+        "wires": []
+    },
+    {
+        "id": "orc-tos-catch",
+        "type": "catch",
+        "z": "orc-tab-transformar-os",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 150,
+        "y": 400,
+        "wires": [
+            [
+                "orc-tos-err-handler"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tos-err-handler",
+        "type": "function",
+        "z": "orc-tab-transformar-os",
+        "name": "Error Handler",
+        "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[transformar-em-os] CATCH: ' + errMsg);\nmsg.statusCode = msg.statusCode || 500;\nmsg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nmsg.payload = { ok: false, error: 'Internal error', osIds: [] };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 380,
+        "y": 400,
+        "wires": [
+            [
+                "orc-tos-decide-out"
+            ]
+        ]
     }
 ]
