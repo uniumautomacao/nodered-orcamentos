@@ -4,7 +4,7 @@
         "type": "tab",
         "label": "Health",
         "disabled": false,
-        "info": "GET /health — Returns module status. Used for liveness/readiness checks."
+        "info": "GET /health \u2014 Returns module status. Used for liveness/readiness checks."
     },
     {
         "id": "orc-health-in",
@@ -17,7 +17,11 @@
         "swaggerDoc": "",
         "x": 160,
         "y": 80,
-        "wires": [["orc-health-fn"]]
+        "wires": [
+            [
+                "orc-health-fn"
+            ]
+        ]
     },
     {
         "id": "orc-health-fn",
@@ -33,7 +37,11 @@
         "libs": [],
         "x": 360,
         "y": 80,
-        "wires": [["orc-health-out"]]
+        "wires": [
+            [
+                "orc-health-out"
+            ]
+        ]
     },
     {
         "id": "orc-health-out",
@@ -46,7 +54,6 @@
         "y": 80,
         "wires": []
     },
-
     {
         "id": "orc-tab-credito-utilizar",
         "type": "tab",
@@ -65,7 +72,11 @@
         "swaggerDoc": "",
         "x": 200,
         "y": 80,
-        "wires": [["orc-util-validate"]]
+        "wires": [
+            [
+                "orc-util-validate"
+            ]
+        ]
     },
     {
         "id": "orc-util-validate",
@@ -81,7 +92,14 @@
         "libs": [],
         "x": 420,
         "y": 80,
-        "wires": [["orc-util-guard"], ["orc-util-out"]]
+        "wires": [
+            [
+                "orc-util-guard"
+            ],
+            [
+                "orc-util-out"
+            ]
+        ]
     },
     {
         "id": "orc-util-guard",
@@ -97,7 +115,14 @@
         "libs": [],
         "x": 640,
         "y": 80,
-        "wires": [["orc-util-exec"], ["orc-util-out"]]
+        "wires": [
+            [
+                "orc-util-exec"
+            ],
+            [
+                "orc-util-out"
+            ]
+        ]
     },
     {
         "id": "orc-util-exec",
@@ -111,13 +136,26 @@
         "initialize": "",
         "finalize": "",
         "libs": [
-            { "var": "nodeHttp", "module": "http" },
-            { "var": "nodeHttps", "module": "https" },
-            { "var": "nodeUrl", "module": "url" }
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
         ],
         "x": 860,
         "y": 80,
-        "wires": [["orc-util-out"]]
+        "wires": [
+            [
+                "orc-util-out"
+            ]
+        ]
     },
     {
         "id": "orc-util-out",
@@ -125,7 +163,9 @@
         "z": "orc-tab-credito-utilizar",
         "name": "Response",
         "statusCode": "",
-        "headers": { "Content-Type": "application/json" },
+        "headers": {
+            "Content-Type": "application/json"
+        },
         "x": 1140,
         "y": 80,
         "wires": []
@@ -139,7 +179,11 @@
         "uncaught": false,
         "x": 160,
         "y": 200,
-        "wires": [["orc-util-err"]]
+        "wires": [
+            [
+                "orc-util-err"
+            ]
+        ]
     },
     {
         "id": "orc-util-err",
@@ -155,15 +199,18 @@
         "libs": [],
         "x": 360,
         "y": 200,
-        "wires": [["orc-util-out"]]
+        "wires": [
+            [
+                "orc-util-out"
+            ]
+        ]
     },
-
     {
         "id": "orc-tab-credito-cancelar",
         "type": "tab",
         "label": "Credito - Cancelar Utilizacao",
         "disabled": false,
-        "info": "POST /orcamentos/creditos/cancelar-utilizacao\n\nBody: { token, id } (id = utilizacao uuid)\n\nLogic (from PA `(Crédito do Cliente) - Cancelar Utilização de Crédito`):\n1. Load utilizacao\n2. If already utilizacao_firmada=true -> no-op (aligned with PA behavior)\n3. Mark utilizacao_cancelada=true\n4. Decrement credito.valor_utilizado by utilizacao.valor_utilizado\n\nResponse: { ok: true, id, cancelled: boolean, reason? }"
+        "info": "POST /orcamentos/creditos/cancelar-utilizacao\n\nBody: { token, id } (id = utilizacao uuid)\n\nLogic (from PA `(Cr\u00e9dito do Cliente) - Cancelar Utiliza\u00e7\u00e3o de Cr\u00e9dito`):\n1. Load utilizacao\n2. If already utilizacao_firmada=true -> no-op (aligned with PA behavior)\n3. Mark utilizacao_cancelada=true\n4. Decrement credito.valor_utilizado by utilizacao.valor_utilizado\n\nResponse: { ok: true, id, cancelled: boolean, reason? }"
     },
     {
         "id": "orc-cancel-in",
@@ -176,7 +223,11 @@
         "swaggerDoc": "",
         "x": 200,
         "y": 80,
-        "wires": [["orc-cancel-validate"]]
+        "wires": [
+            [
+                "orc-cancel-validate"
+            ]
+        ]
     },
     {
         "id": "orc-cancel-validate",
@@ -192,7 +243,14 @@
         "libs": [],
         "x": 420,
         "y": 80,
-        "wires": [["orc-cancel-guard"], ["orc-cancel-out"]]
+        "wires": [
+            [
+                "orc-cancel-guard"
+            ],
+            [
+                "orc-cancel-out"
+            ]
+        ]
     },
     {
         "id": "orc-cancel-guard",
@@ -208,7 +266,14 @@
         "libs": [],
         "x": 640,
         "y": 80,
-        "wires": [["orc-cancel-exec"], ["orc-cancel-out"]]
+        "wires": [
+            [
+                "orc-cancel-exec"
+            ],
+            [
+                "orc-cancel-out"
+            ]
+        ]
     },
     {
         "id": "orc-cancel-exec",
@@ -222,13 +287,26 @@
         "initialize": "",
         "finalize": "",
         "libs": [
-            { "var": "nodeHttp", "module": "http" },
-            { "var": "nodeHttps", "module": "https" },
-            { "var": "nodeUrl", "module": "url" }
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
         ],
         "x": 860,
         "y": 80,
-        "wires": [["orc-cancel-out"]]
+        "wires": [
+            [
+                "orc-cancel-out"
+            ]
+        ]
     },
     {
         "id": "orc-cancel-out",
@@ -236,7 +314,9 @@
         "z": "orc-tab-credito-cancelar",
         "name": "Response",
         "statusCode": "",
-        "headers": { "Content-Type": "application/json" },
+        "headers": {
+            "Content-Type": "application/json"
+        },
         "x": 1140,
         "y": 80,
         "wires": []
@@ -250,7 +330,11 @@
         "uncaught": false,
         "x": 160,
         "y": 200,
-        "wires": [["orc-cancel-err"]]
+        "wires": [
+            [
+                "orc-cancel-err"
+            ]
+        ]
     },
     {
         "id": "orc-cancel-err",
@@ -266,15 +350,18 @@
         "libs": [],
         "x": 360,
         "y": 200,
-        "wires": [["orc-cancel-out"]]
+        "wires": [
+            [
+                "orc-cancel-out"
+            ]
+        ]
     },
-
     {
         "id": "orc-tab-credito-firmar",
         "type": "tab",
         "label": "Credito - Firmar Utilizacoes",
         "disabled": false,
-        "info": "POST /orcamentos/creditos/firmar-utilizacoes\n\nBody: { token, orcamentoId } (also accepts orcamentoid alias)\n\nAlso callable internally via link-in node 'firmar-utilizacoes-internal' (msg.orcamentoId set by caller).\nUsed by publicar-pedido (Batch 6).\n\nLogic (from PA `(Crédito do Cliente) - Firmar Utilizações de um orçamento`):\n1. GET utilizacoes_de_credito for orcamento where utilizacao_cancelada != true\n2. For each: PATCH utilizacao_firmada=true\n\nResponse: { ok: true, orcamentoId, count }"
+        "info": "POST /orcamentos/creditos/firmar-utilizacoes\n\nBody: { token, orcamentoId } (also accepts orcamentoid alias)\n\nAlso callable internally via link-in node 'firmar-utilizacoes-internal' (msg.orcamentoId set by caller).\nUsed by publicar-pedido (Batch 6).\n\nLogic (from PA `(Cr\u00e9dito do Cliente) - Firmar Utiliza\u00e7\u00f5es de um or\u00e7amento`):\n1. GET utilizacoes_de_credito for orcamento where utilizacao_cancelada != true\n2. For each: PATCH utilizacao_firmada=true\n\nResponse: { ok: true, orcamentoId, count }"
     },
     {
         "id": "orc-firmar-in",
@@ -287,7 +374,11 @@
         "swaggerDoc": "",
         "x": 200,
         "y": 80,
-        "wires": [["orc-firmar-validate-http"]]
+        "wires": [
+            [
+                "orc-firmar-validate-http"
+            ]
+        ]
     },
     {
         "id": "orc-firmar-validate-http",
@@ -303,7 +394,14 @@
         "libs": [],
         "x": 420,
         "y": 80,
-        "wires": [["orc-firmar-guard"], ["orc-firmar-out"]]
+        "wires": [
+            [
+                "orc-firmar-guard"
+            ],
+            [
+                "orc-firmar-out"
+            ]
+        ]
     },
     {
         "id": "orc-firmar-guard",
@@ -319,7 +417,14 @@
         "libs": [],
         "x": 660,
         "y": 80,
-        "wires": [["orc-firmar-exec"], ["orc-firmar-out"]]
+        "wires": [
+            [
+                "orc-firmar-exec"
+            ],
+            [
+                "orc-firmar-out"
+            ]
+        ]
     },
     {
         "id": "orc-firmar-link-in",
@@ -329,7 +434,11 @@
         "links": [],
         "x": 200,
         "y": 160,
-        "wires": [["orc-firmar-validate-internal"]]
+        "wires": [
+            [
+                "orc-firmar-validate-internal"
+            ]
+        ]
     },
     {
         "id": "orc-firmar-validate-internal",
@@ -345,7 +454,11 @@
         "libs": [],
         "x": 460,
         "y": 160,
-        "wires": [["orc-firmar-exec"]]
+        "wires": [
+            [
+                "orc-firmar-exec"
+            ]
+        ]
     },
     {
         "id": "orc-firmar-exec",
@@ -359,13 +472,26 @@
         "initialize": "",
         "finalize": "",
         "libs": [
-            { "var": "nodeHttp", "module": "http" },
-            { "var": "nodeHttps", "module": "https" },
-            { "var": "nodeUrl", "module": "url" }
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
         ],
         "x": 900,
         "y": 80,
-        "wires": [["orc-firmar-decision"]]
+        "wires": [
+            [
+                "orc-firmar-decision"
+            ]
+        ]
     },
     {
         "id": "orc-firmar-decision",
@@ -375,15 +501,28 @@
         "property": "_source",
         "propertyType": "msg",
         "rules": [
-            { "t": "eq", "v": "http", "vt": "str" },
-            { "t": "else" }
+            {
+                "t": "eq",
+                "v": "http",
+                "vt": "str"
+            },
+            {
+                "t": "else"
+            }
         ],
         "checkall": "false",
         "repair": false,
         "outputs": 2,
         "x": 1100,
         "y": 80,
-        "wires": [["orc-firmar-out"], ["orc-firmar-link-out"]]
+        "wires": [
+            [
+                "orc-firmar-out"
+            ],
+            [
+                "orc-firmar-link-out"
+            ]
+        ]
     },
     {
         "id": "orc-firmar-out",
@@ -391,7 +530,9 @@
         "z": "orc-tab-credito-firmar",
         "name": "HTTP Response",
         "statusCode": "",
-        "headers": { "Content-Type": "application/json" },
+        "headers": {
+            "Content-Type": "application/json"
+        },
         "x": 1300,
         "y": 60,
         "wires": []
@@ -416,7 +557,11 @@
         "uncaught": false,
         "x": 160,
         "y": 260,
-        "wires": [["orc-firmar-err"]]
+        "wires": [
+            [
+                "orc-firmar-err"
+            ]
+        ]
     },
     {
         "id": "orc-firmar-err",
@@ -432,15 +577,19 @@
         "libs": [],
         "x": 380,
         "y": 260,
-        "wires": [["orc-firmar-out"], []]
+        "wires": [
+            [
+                "orc-firmar-out"
+            ],
+            []
+        ]
     },
-
     {
         "id": "orc-tab-credito-reembolso",
         "type": "tab",
         "label": "Credito - Registrar Reembolso",
         "disabled": false,
-        "info": "POST /orcamentos/creditos/registrar-reembolso\n\nBody: { token, creditoid, valor }\n\nLogic (from PA `(Crédito do Cliente) - Registrar Reembolso de Crédito`):\n1. Validate valor > 0\n2. Load credito; verify valor <= valor_disponivel\n3. Create utilizacoes_de_credito: tipo_de_utilizacao=100000001 (reembolso), utilizacao_firmada=true, orcamento_id=null\n4. Update credito.valor_utilizado += valor\n\nResponse: { ok: true, utilizacaoId, valorUtilizado, valorDisponivel }"
+        "info": "POST /orcamentos/creditos/registrar-reembolso\n\nBody: { token, creditoid, valor }\n\nLogic (from PA `(Cr\u00e9dito do Cliente) - Registrar Reembolso de Cr\u00e9dito`):\n1. Validate valor > 0\n2. Load credito; verify valor <= valor_disponivel\n3. Create utilizacoes_de_credito: tipo_de_utilizacao=100000001 (reembolso), utilizacao_firmada=true, orcamento_id=null\n4. Update credito.valor_utilizado += valor\n\nResponse: { ok: true, utilizacaoId, valorUtilizado, valorDisponivel }"
     },
     {
         "id": "orc-reemb-in",
@@ -453,7 +602,11 @@
         "swaggerDoc": "",
         "x": 200,
         "y": 80,
-        "wires": [["orc-reemb-validate"]]
+        "wires": [
+            [
+                "orc-reemb-validate"
+            ]
+        ]
     },
     {
         "id": "orc-reemb-validate",
@@ -469,7 +622,14 @@
         "libs": [],
         "x": 420,
         "y": 80,
-        "wires": [["orc-reemb-guard"], ["orc-reemb-out"]]
+        "wires": [
+            [
+                "orc-reemb-guard"
+            ],
+            [
+                "orc-reemb-out"
+            ]
+        ]
     },
     {
         "id": "orc-reemb-guard",
@@ -485,7 +645,14 @@
         "libs": [],
         "x": 640,
         "y": 80,
-        "wires": [["orc-reemb-exec"], ["orc-reemb-out"]]
+        "wires": [
+            [
+                "orc-reemb-exec"
+            ],
+            [
+                "orc-reemb-out"
+            ]
+        ]
     },
     {
         "id": "orc-reemb-exec",
@@ -499,13 +666,26 @@
         "initialize": "",
         "finalize": "",
         "libs": [
-            { "var": "nodeHttp", "module": "http" },
-            { "var": "nodeHttps", "module": "https" },
-            { "var": "nodeUrl", "module": "url" }
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
         ],
         "x": 860,
         "y": 80,
-        "wires": [["orc-reemb-out"]]
+        "wires": [
+            [
+                "orc-reemb-out"
+            ]
+        ]
     },
     {
         "id": "orc-reemb-out",
@@ -513,7 +693,9 @@
         "z": "orc-tab-credito-reembolso",
         "name": "Response",
         "statusCode": "",
-        "headers": { "Content-Type": "application/json" },
+        "headers": {
+            "Content-Type": "application/json"
+        },
         "x": 1140,
         "y": 80,
         "wires": []
@@ -527,7 +709,11 @@
         "uncaught": false,
         "x": 160,
         "y": 200,
-        "wires": [["orc-reemb-err"]]
+        "wires": [
+            [
+                "orc-reemb-err"
+            ]
+        ]
     },
     {
         "id": "orc-reemb-err",
@@ -543,15 +729,18 @@
         "libs": [],
         "x": 360,
         "y": 200,
-        "wires": [["orc-reemb-out"]]
+        "wires": [
+            [
+                "orc-reemb-out"
+            ]
+        ]
     },
-
     {
         "id": "orc-tab-credito-devolucao-os",
         "type": "tab",
         "label": "Credito - Gerar de Devolucao OS",
         "disabled": false,
-        "info": "POST /orcamentos/creditos/gerar-de-devolucao-os\n\nBody: { token, prodOsId, itemOrcamentoId, prodOsQuantidade }\n\nSince produtos_servico in Supabase is missing opcao_de_devolucao and item_de_orcamento_id columns, the caller MUST pass prodOsId (identifier for bookkeeping only) and prodOsQuantidade (read from Dataverse prodos.quantidade upstream).\n\nLogic (from PA `(Crédito do Cliente) - Gerar Crédito de devolução de OS`):\n1. GET itens_de_orcamento[itemOrcamentoId] for quantidade_disponivel_devolucao, valor_devolucao_disponivel, orcamento_id\n2. GET orcamentos[orcamento_id] -> cliente_id\n3. Branch:\n   - If quantidade_disponivel_devolucao >= prodOsQuantidade -> credit of full valor_devolucao_disponivel\n   - Else -> credit of (valor_devolucao_disponivel / quantidade_disponivel_devolucao) * prodOsQuantidade\n4. Create creditos_do_cliente row\n5. Update item.quantidade_devolvida += prodOsQuantidade\n6. NOTE: PA also updates prodos.opcao_de_devolucao=100000002; Supabase produtos_servico lacks this column. Caller must update Dataverse separately.\n\nResponse: { ok: true, creditoId, valorDoCredito, branch, produtosServicoUpdated: false, note }"
+        "info": "POST /orcamentos/creditos/gerar-de-devolucao-os\n\nBody: { token, prodOsId, itemOrcamentoId, prodOsQuantidade }\n\nSince produtos_servico in Supabase is missing opcao_de_devolucao and item_de_orcamento_id columns, the caller MUST pass prodOsId (identifier for bookkeeping only) and prodOsQuantidade (read from Dataverse prodos.quantidade upstream).\n\nLogic (from PA `(Cr\u00e9dito do Cliente) - Gerar Cr\u00e9dito de devolu\u00e7\u00e3o de OS`):\n1. GET itens_de_orcamento[itemOrcamentoId] for quantidade_disponivel_devolucao, valor_devolucao_disponivel, orcamento_id\n2. GET orcamentos[orcamento_id] -> cliente_id\n3. Branch:\n   - If quantidade_disponivel_devolucao >= prodOsQuantidade -> credit of full valor_devolucao_disponivel\n   - Else -> credit of (valor_devolucao_disponivel / quantidade_disponivel_devolucao) * prodOsQuantidade\n4. Create creditos_do_cliente row\n5. Update item.quantidade_devolvida += prodOsQuantidade\n6. NOTE: PA also updates prodos.opcao_de_devolucao=100000002; Supabase produtos_servico lacks this column. Caller must update Dataverse separately.\n\nResponse: { ok: true, creditoId, valorDoCredito, branch, produtosServicoUpdated: false, note }"
     },
     {
         "id": "orc-devol-in",
@@ -564,7 +753,11 @@
         "swaggerDoc": "",
         "x": 200,
         "y": 80,
-        "wires": [["orc-devol-validate"]]
+        "wires": [
+            [
+                "orc-devol-validate"
+            ]
+        ]
     },
     {
         "id": "orc-devol-validate",
@@ -580,7 +773,14 @@
         "libs": [],
         "x": 420,
         "y": 80,
-        "wires": [["orc-devol-guard"], ["orc-devol-out"]]
+        "wires": [
+            [
+                "orc-devol-guard"
+            ],
+            [
+                "orc-devol-out"
+            ]
+        ]
     },
     {
         "id": "orc-devol-guard",
@@ -596,7 +796,14 @@
         "libs": [],
         "x": 640,
         "y": 80,
-        "wires": [["orc-devol-exec"], ["orc-devol-out"]]
+        "wires": [
+            [
+                "orc-devol-exec"
+            ],
+            [
+                "orc-devol-out"
+            ]
+        ]
     },
     {
         "id": "orc-devol-exec",
@@ -610,13 +817,26 @@
         "initialize": "",
         "finalize": "",
         "libs": [
-            { "var": "nodeHttp", "module": "http" },
-            { "var": "nodeHttps", "module": "https" },
-            { "var": "nodeUrl", "module": "url" }
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
         ],
         "x": 880,
         "y": 80,
-        "wires": [["orc-devol-out"]]
+        "wires": [
+            [
+                "orc-devol-out"
+            ]
+        ]
     },
     {
         "id": "orc-devol-out",
@@ -624,7 +844,9 @@
         "z": "orc-tab-credito-devolucao-os",
         "name": "Response",
         "statusCode": "",
-        "headers": { "Content-Type": "application/json" },
+        "headers": {
+            "Content-Type": "application/json"
+        },
         "x": 1140,
         "y": 80,
         "wires": []
@@ -638,7 +860,11 @@
         "uncaught": false,
         "x": 160,
         "y": 200,
-        "wires": [["orc-devol-err"]]
+        "wires": [
+            [
+                "orc-devol-err"
+            ]
+        ]
     },
     {
         "id": "orc-devol-err",
@@ -654,6 +880,463 @@
         "libs": [],
         "x": 360,
         "y": 200,
-        "wires": [["orc-devol-out"]]
+        "wires": [
+            [
+                "orc-devol-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tab-notif-pedido",
+        "type": "tab",
+        "label": "Notificar Novo Pedido",
+        "disabled": false,
+        "info": "POST /orcamentos/notificar-novo-pedido\n\nBody: { token, orcamentoid }\n\nPLACEHOLDER implementation. PA '(Notification) - Notificar cria\u00e7\u00e3o de novo pedido' posts Teams messages via Teams Bot to users in notification_preferences. Neither entity is migrated to Supabase, and Teams Graph API integration requires credentials not yet provisioned. This flow currently logs the event and returns ok:true,notified:false. FIX pending: wire to Teams Graph API / migrated notification_preferences table."
+    },
+    {
+        "id": "orc-notif-pedido-in",
+        "type": "http in",
+        "z": "orc-tab-notif-pedido",
+        "name": "POST /orcamentos/notificar-novo-pedido",
+        "url": "/orcamentos/notificar-novo-pedido",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 200,
+        "y": 80,
+        "wires": [
+            [
+                "orc-notif-pedido-validate"
+            ]
+        ]
+    },
+    {
+        "id": "orc-notif-pedido-validate",
+        "type": "function",
+        "z": "orc-tab-notif-pedido",
+        "name": "Validate Input",
+        "func": "const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst body = msg.payload || {};\nconst orcamentoId = body.orcamentoid || body.orcamentoId;\nif (!orcamentoId || !UUID_RE.test(orcamentoId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'orcamentoid must be a valid UUID' };\n    return [null, msg];\n}\nmsg.orcamentoId = orcamentoId;\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 80,
+        "wires": [
+            [
+                "orc-notif-pedido-guard"
+            ],
+            [
+                "orc-notif-pedido-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-notif-pedido-guard",
+        "type": "function",
+        "z": "orc-tab-notif-pedido",
+        "name": "Env Guard",
+        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 80,
+        "wires": [
+            [
+                "orc-notif-pedido-exec"
+            ],
+            [
+                "orc-notif-pedido-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-notif-pedido-exec",
+        "type": "function",
+        "z": "orc-tab-notif-pedido",
+        "name": "Execute",
+        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst orcamentoId = msg.orcamentoId;\ntry {\n    const orcRes = await pgReq('GET', `/rest/v1/orcamentos?id=eq.${encodeURIComponent(orcamentoId)}&select=id,nome_do_cliente,numero_da_proposta,valor_total_com_desconto,consultor_id,pedido_pdf_id`, null);\n    if (orcRes.statusCode !== 200 || !Array.isArray(orcRes.body) || orcRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: `Orcamento '${orcamentoId}' not found` };\n        return msg;\n    }\n    const orc = orcRes.body[0];\n    // PLACEHOLDER: PA '(Notification) - Notificar cria\u00e7\u00e3o de novo pedido' posts Teams messages to consultants\n    // matching notification_preferences.new_novopedido=true. Both 'notification_preferences' entity and\n    // Teams Graph API integration are NOT yet migrated to Supabase/Node-RED. Logging event for observability.\n    node.log(`[notificar-novo-pedido] Event: orcamento=${orcamentoId} cliente='${orc.nome_do_cliente || '?'}' proposta=${orc.numero_da_proposta || '?'} valor=${orc.valor_total_com_desconto || 0} consultor=${orc.consultor_id || 'none'} pedido_pdf=${orc.pedido_pdf_id || 'none'}`);\n    msg.statusCode = 200;\n    msg.payload = { ok: true, notified: false, reason: 'not-implemented-dev-placeholder', orcamentoId: orcamentoId, logged: true };\n    return msg;\n} catch (err) {\n    node.error('[notificar-novo-pedido] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 60,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
+        ],
+        "x": 860,
+        "y": 80,
+        "wires": [
+            [
+                "orc-notif-pedido-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-notif-pedido-out",
+        "type": "http response",
+        "z": "orc-tab-notif-pedido",
+        "name": "Response",
+        "statusCode": "",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "x": 1140,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "orc-notif-pedido-catch",
+        "type": "catch",
+        "z": "orc-tab-notif-pedido",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 160,
+        "y": 200,
+        "wires": [
+            [
+                "orc-notif-pedido-err"
+            ]
+        ]
+    },
+    {
+        "id": "orc-notif-pedido-err",
+        "type": "function",
+        "z": "orc-tab-notif-pedido",
+        "name": "Error Handler",
+        "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[notificar-novo-pedido] CATCH: ' + errMsg);\nmsg.statusCode = msg.statusCode || 500;\nmsg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nmsg.payload = { ok: false, error: 'Internal error', flow: 'notificar-novo-pedido', timestamp: new Date().toISOString() };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 200,
+        "wires": [
+            [
+                "orc-notif-pedido-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tab-item-sobre",
+        "type": "tab",
+        "label": "Item - Inserir Sobreposicao",
+        "disabled": false,
+        "info": "POST /orcamentos/itens/on-create\n\nBody: { token, itemid }\n\nPer PA '(Item de Or\u00e7amento) - Quando um item \u00e9 criado, inserir valor de sobreposi\u00e7\u00e3o vigente':\nLoads item; if valor_de_sobreposicao OR valor_servico_de_sobreposicao is null/0/negative AND produto_id set:\n  Fetches precos_de_produto.{preco_de_venda, preco_servico_instalacao}\n  If preco_de_venda > 0, patches item with both sobreposicao values.\nReturns { ok, applied, itemId, reason? }."
+    },
+    {
+        "id": "orc-item-sobre-in",
+        "type": "http in",
+        "z": "orc-tab-item-sobre",
+        "name": "POST /orcamentos/itens/on-create",
+        "url": "/orcamentos/itens/on-create",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 200,
+        "y": 80,
+        "wires": [
+            [
+                "orc-item-sobre-validate"
+            ]
+        ]
+    },
+    {
+        "id": "orc-item-sobre-validate",
+        "type": "function",
+        "z": "orc-tab-item-sobre",
+        "name": "Validate Input",
+        "func": "const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst body = msg.payload || {};\nconst itemId = body.itemid || body.itemId;\nif (!itemId || !UUID_RE.test(itemId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'itemid must be a valid UUID' };\n    return [null, msg];\n}\nmsg.itemId = itemId;\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 80,
+        "wires": [
+            [
+                "orc-item-sobre-guard"
+            ],
+            [
+                "orc-item-sobre-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-item-sobre-guard",
+        "type": "function",
+        "z": "orc-tab-item-sobre",
+        "name": "Env Guard",
+        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 80,
+        "wires": [
+            [
+                "orc-item-sobre-exec"
+            ],
+            [
+                "orc-item-sobre-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-item-sobre-exec",
+        "type": "function",
+        "z": "orc-tab-item-sobre",
+        "name": "Execute",
+        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst itemId = msg.itemId;\ntry {\n    const itemRes = await pgReq('GET', `/rest/v1/itens_de_orcamento?id=eq.${encodeURIComponent(itemId)}&select=id,orcamento_id,produto_id,valor_de_sobreposicao,valor_servico_de_sobreposicao`, null);\n    if (itemRes.statusCode !== 200 || !Array.isArray(itemRes.body) || itemRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: `Item '${itemId}' not found` };\n        return msg;\n    }\n    const item = itemRes.body[0];\n    if (!item.produto_id) {\n        msg.statusCode = 200;\n        msg.payload = { ok: true, applied: false, reason: 'no-produto-id', itemId };\n        return msg;\n    }\n    const vSobre = item.valor_de_sobreposicao;\n    const vSobreServ = item.valor_servico_de_sobreposicao;\n    const needsUpdate = (vSobre === null || Number(vSobre) <= 0) || (vSobreServ === null || Number(vSobreServ) <= 0);\n    if (!needsUpdate) {\n        msg.statusCode = 200;\n        msg.payload = { ok: true, applied: false, reason: 'already-set', itemId };\n        return msg;\n    }\n    const prRes = await pgReq('GET', `/rest/v1/precos_de_produto?id=eq.${encodeURIComponent(item.produto_id)}&select=id,preco_de_venda,preco_servico_instalacao`, null);\n    if (prRes.statusCode !== 200 || !Array.isArray(prRes.body) || prRes.body.length === 0) {\n        msg.statusCode = 200;\n        msg.payload = { ok: true, applied: false, reason: 'preco-not-found', itemId, produto_id: item.produto_id };\n        return msg;\n    }\n    const preco = prRes.body[0];\n    const precoVenda = Number(preco.preco_de_venda || 0);\n    const precoServ = Number(preco.preco_servico_instalacao || 0);\n    if (!(precoVenda > 0)) {\n        msg.statusCode = 200;\n        msg.payload = { ok: true, applied: false, reason: 'preco-venda-zero', itemId };\n        return msg;\n    }\n    const patchRes = await pgReq('PATCH', `/rest/v1/itens_de_orcamento?id=eq.${encodeURIComponent(itemId)}`, {\n        valor_de_sobreposicao: precoVenda,\n        valor_servico_de_sobreposicao: precoServ,\n        updated_at: new Date().toISOString()\n    }, { 'Prefer': 'return=representation' });\n    if (patchRes.statusCode < 200 || patchRes.statusCode >= 300) {\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: `Failed to patch item: HTTP ${patchRes.statusCode}` };\n        return msg;\n    }\n    msg.statusCode = 200;\n    msg.payload = { ok: true, applied: true, itemId, valor_de_sobreposicao: precoVenda, valor_servico_de_sobreposicao: precoServ };\n    return msg;\n} catch (err) {\n    node.error('[item-inserir-sobreposicao] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 60,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
+        ],
+        "x": 860,
+        "y": 80,
+        "wires": [
+            [
+                "orc-item-sobre-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-item-sobre-out",
+        "type": "http response",
+        "z": "orc-tab-item-sobre",
+        "name": "Response",
+        "statusCode": "",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "x": 1140,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "orc-item-sobre-catch",
+        "type": "catch",
+        "z": "orc-tab-item-sobre",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 160,
+        "y": 200,
+        "wires": [
+            [
+                "orc-item-sobre-err"
+            ]
+        ]
+    },
+    {
+        "id": "orc-item-sobre-err",
+        "type": "function",
+        "z": "orc-tab-item-sobre",
+        "name": "Error Handler",
+        "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[item-inserir-sobreposicao] CATCH: ' + errMsg);\nmsg.statusCode = msg.statusCode || 500;\nmsg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nmsg.payload = { ok: false, error: 'Internal error', flow: 'item-inserir-sobreposicao', timestamp: new Date().toISOString() };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 200,
+        "wires": [
+            [
+                "orc-item-sobre-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tab-desmembrar",
+        "type": "tab",
+        "label": "Desmembrar Kits",
+        "disabled": false,
+        "info": "POST /orcamentos/desmembrar-kits\n\nBody: { token, orcamentoid }\n\nPer PA '(Or\u00e7amento) - Desmembrar Kits':\nPhase A: for each kit item (opcao_de_fornecimento=100000000, kit=true, state_code=0, removido!=true):\n  list itens_de_kit children; for each, create a non-kit item with qty = parent.qty * child.qty.\n  Delete original kit item.\nPhase B: group remaining items by (produto_id, section, ambiente); for groups with >=2 items,\n  create one consolidated item with summed qty, then delete duplicates.\nReturns counts for both phases."
+    },
+    {
+        "id": "orc-desmembrar-in",
+        "type": "http in",
+        "z": "orc-tab-desmembrar",
+        "name": "POST /orcamentos/desmembrar-kits",
+        "url": "/orcamentos/desmembrar-kits",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 200,
+        "y": 80,
+        "wires": [
+            [
+                "orc-desmembrar-validate"
+            ]
+        ]
+    },
+    {
+        "id": "orc-desmembrar-validate",
+        "type": "function",
+        "z": "orc-tab-desmembrar",
+        "name": "Validate Input",
+        "func": "const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst body = msg.payload || {};\nconst orcamentoId = body.orcamentoid || body.orcamentoId;\nif (!orcamentoId || !UUID_RE.test(orcamentoId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'orcamentoid must be a valid UUID' };\n    return [null, msg];\n}\nmsg.orcamentoId = orcamentoId;\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 80,
+        "wires": [
+            [
+                "orc-desmembrar-guard"
+            ],
+            [
+                "orc-desmembrar-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-desmembrar-guard",
+        "type": "function",
+        "z": "orc-tab-desmembrar",
+        "name": "Env Guard",
+        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 80,
+        "wires": [
+            [
+                "orc-desmembrar-exec"
+            ],
+            [
+                "orc-desmembrar-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-desmembrar-exec",
+        "type": "function",
+        "z": "orc-tab-desmembrar",
+        "name": "Execute",
+        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst orcamentoId = msg.orcamentoId;\nconst baseFilter = `orcamento_id=eq.${encodeURIComponent(orcamentoId)}&opcao_de_fornecimento=eq.100000000&state_code=eq.0&removido=not.eq.true`;\ntry {\n    // Phase A: expand kits\n    const kitsRes = await pgReq('GET', `/rest/v1/itens_de_orcamento?${baseFilter}&kit=eq.true&select=id,orcamento_id,produto_id,quantidade,acrescimo,ambiente,descricao,descricao_personalizada,opcao_de_fornecimento,cadastro_para_troca,canvas_x,canvas_y,canvas_zone,canvas_zoom,congelar,duplicacao_solicitada,opcao_de_devolucao,removido,section,section_order_index`, null);\n    if (kitsRes.statusCode !== 200 || !Array.isArray(kitsRes.body)) {\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: `Failed to list kits: HTTP ${kitsRes.statusCode}` };\n        return msg;\n    }\n    const kits = kitsRes.body;\n    let childrenCreated = 0;\n    let kitsExpanded = 0;\n    const phaseAErrors = [];\n\n    for (const kit of kits) {\n        if (!kit.produto_id) continue;\n        const childRes = await pgReq('GET', `/rest/v1/itens_de_kit?kit_id=eq.${encodeURIComponent(kit.produto_id)}&select=id,produto_id,quantidade`, null);\n        if (childRes.statusCode !== 200 || !Array.isArray(childRes.body)) {\n            phaseAErrors.push({ kitId: kit.id, stage: 'list-children', status: childRes.statusCode });\n            continue;\n        }\n        const children = childRes.body;\n        let anyChildCreated = false;\n        for (const child of children) {\n            if (!child.produto_id) continue;\n            const newItem = {\n                orcamento_id: kit.orcamento_id,\n                produto_id: child.produto_id,\n                quantidade: Number(kit.quantidade || 0) * Number(child.quantidade || 0),\n                acrescimo: kit.acrescimo,\n                ambiente: kit.ambiente,\n                descricao: kit.descricao,\n                descricao_personalizada: kit.descricao_personalizada,\n                opcao_de_fornecimento: kit.opcao_de_fornecimento,\n                cadastro_para_troca: kit.cadastro_para_troca,\n                canvas_x: kit.canvas_x,\n                canvas_y: kit.canvas_y,\n                canvas_zone: kit.canvas_zone,\n                canvas_zoom: kit.canvas_zoom,\n                congelar: kit.congelar,\n                duplicacao_solicitada: kit.duplicacao_solicitada,\n                opcao_de_devolucao: kit.opcao_de_devolucao,\n                removido: kit.removido,\n                section: kit.section,\n                section_order_index: kit.section_order_index,\n                kit: false,\n                parent_id: kit.id\n            };\n            const createRes = await pgReq('POST', '/rest/v1/itens_de_orcamento', newItem, { 'Prefer': 'return=representation' });\n            if (createRes.statusCode >= 200 && createRes.statusCode < 300) {\n                childrenCreated++;\n                anyChildCreated = true;\n            } else {\n                phaseAErrors.push({ kitId: kit.id, childProdutoId: child.produto_id, stage: 'create-child', status: createRes.statusCode });\n            }\n        }\n        if (anyChildCreated) {\n            const delRes = await pgReq('DELETE', `/rest/v1/itens_de_orcamento?id=eq.${encodeURIComponent(kit.id)}`, null);\n            if (delRes.statusCode >= 200 && delRes.statusCode < 300) {\n                kitsExpanded++;\n            } else {\n                phaseAErrors.push({ kitId: kit.id, stage: 'delete-original', status: delRes.statusCode });\n            }\n        }\n    }\n\n    // Phase B: consolidate duplicates by (produto_id, section, ambiente)\n    const allRes = await pgReq('GET', `/rest/v1/itens_de_orcamento?${baseFilter}&select=id,produto_id,section,ambiente,quantidade,acrescimo,descricao,descricao_personalizada,opcao_de_fornecimento,cadastro_para_troca,canvas_x,canvas_y,canvas_zone,canvas_zoom,congelar,duplicacao_solicitada,opcao_de_devolucao,removido,section_order_index,orcamento_id`, null);\n    if (allRes.statusCode !== 200 || !Array.isArray(allRes.body)) {\n        msg.statusCode = 207;\n        msg.payload = { ok: true, phaseA: { kitsExpanded, childrenCreated, errors: phaseAErrors }, phaseB: { skipped: true, reason: `list-failed-${allRes.statusCode}` } };\n        return msg;\n    }\n    const all = allRes.body;\n    const groups = new Map();\n    for (const it of all) {\n        if (!it.produto_id) continue;\n        const key = `${it.produto_id}||${it.section || ''}||${it.ambiente || ''}`;\n        if (!groups.has(key)) groups.set(key, []);\n        groups.get(key).push(it);\n    }\n    let consolidated = 0;\n    let consolidatedDeleted = 0;\n    const phaseBErrors = [];\n    for (const [key, items] of groups.entries()) {\n        if (items.length < 2) continue;\n        const sumQty = items.reduce((a, it) => a + Number(it.quantidade || 0), 0);\n        const tmpl = items[0];\n        const newItem = {\n            orcamento_id: tmpl.orcamento_id,\n            produto_id: tmpl.produto_id,\n            quantidade: sumQty,\n            acrescimo: tmpl.acrescimo,\n            ambiente: tmpl.ambiente,\n            descricao: tmpl.descricao,\n            descricao_personalizada: tmpl.descricao_personalizada,\n            opcao_de_fornecimento: tmpl.opcao_de_fornecimento,\n            cadastro_para_troca: tmpl.cadastro_para_troca,\n            canvas_x: tmpl.canvas_x,\n            canvas_y: tmpl.canvas_y,\n            canvas_zone: tmpl.canvas_zone,\n            canvas_zoom: tmpl.canvas_zoom,\n            congelar: tmpl.congelar,\n            duplicacao_solicitada: tmpl.duplicacao_solicitada,\n            opcao_de_devolucao: tmpl.opcao_de_devolucao,\n            removido: tmpl.removido,\n            section: tmpl.section,\n            section_order_index: tmpl.section_order_index,\n            kit: false\n        };\n        const cRes = await pgReq('POST', '/rest/v1/itens_de_orcamento', newItem, { 'Prefer': 'return=representation' });\n        if (cRes.statusCode < 200 || cRes.statusCode >= 300) {\n            phaseBErrors.push({ key, stage: 'create-consolidated', status: cRes.statusCode });\n            continue;\n        }\n        consolidated++;\n        for (const it of items) {\n            const dRes = await pgReq('DELETE', `/rest/v1/itens_de_orcamento?id=eq.${encodeURIComponent(it.id)}`, null);\n            if (dRes.statusCode >= 200 && dRes.statusCode < 300) {\n                consolidatedDeleted++;\n            } else {\n                phaseBErrors.push({ itemId: it.id, stage: 'delete-dup', status: dRes.statusCode });\n            }\n        }\n    }\n\n    msg.statusCode = 200;\n    msg.payload = {\n        ok: true,\n        orcamentoId: orcamentoId,\n        phaseA: { kitsFound: kits.length, kitsExpanded, childrenCreated, errors: phaseAErrors.length },\n        phaseB: { groupsProcessed: groups.size, consolidated, consolidatedDeleted, errors: phaseBErrors.length }\n    };\n    return msg;\n} catch (err) {\n    node.error('[desmembrar-kits] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "outputs": 1,
+        "timeout": 60,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
+        ],
+        "x": 860,
+        "y": 80,
+        "wires": [
+            [
+                "orc-desmembrar-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-desmembrar-out",
+        "type": "http response",
+        "z": "orc-tab-desmembrar",
+        "name": "Response",
+        "statusCode": "",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "x": 1140,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "orc-desmembrar-catch",
+        "type": "catch",
+        "z": "orc-tab-desmembrar",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 160,
+        "y": 200,
+        "wires": [
+            [
+                "orc-desmembrar-err"
+            ]
+        ]
+    },
+    {
+        "id": "orc-desmembrar-err",
+        "type": "function",
+        "z": "orc-tab-desmembrar",
+        "name": "Error Handler",
+        "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[desmembrar-kits] CATCH: ' + errMsg);\nmsg.statusCode = msg.statusCode || 500;\nmsg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nmsg.payload = { ok: false, error: 'Internal error', flow: 'desmembrar-kits', timestamp: new Date().toISOString() };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 200,
+        "wires": [
+            [
+                "orc-desmembrar-out"
+            ]
+        ]
     }
 ]
