@@ -74,7 +74,7 @@
         "id": "orc-subflow-ownership-check",
         "type": "subflow",
         "name": "Ownership Check",
-        "info": "Validates that the authenticated user (via msg.cfIdentity.email) owns the target resources.\n\nChecks any of the following if provided in msg.payload:\n- creditoId -> creditos_do_cliente.cliente_id\n- orcamentoId -> orcamentos.cliente_id\n- utilizacaoId -> utilizacoes_de_credito.cliente_id\n\nSets msg.cfProfile = { id, cliente_id } on success.\n\nOutputs:\n- [0] Authorized: msg.cfProfile set\n- [1] Unauthorized/Forbidden: msg.statusCode=401|403",
+        "info": "Data-integrity authorization check.\n\n- Requires msg.cfIdentity.email (set by orc-subflow-cf-access upstream).\n- Non-blocking profile lookup: sets msg.audit_profile_id for audit trail.\n- If BOTH msg.payload.creditoId and msg.payload.orcamentoId are provided,\n  verifies they belong to the same cliente (403 data_integrity_mismatch otherwise).\n- Single-resource flows (only credito OR only orcamento) do an existence check.\n- On success sets msg.authz_cliente_id.\n\nOutputs:\n- [0] Authorized\n- [1] Unauthorized/Forbidden/NotFound",
         "category": "Orcamentos",
         "in": [
             {
@@ -118,7 +118,7 @@
         "type": "function",
         "z": "orc-subflow-ownership-check",
         "name": "Check Ownership",
-        "func": "const pgReq = global.get('pgReq');\nif (typeof pgReq !== 'function') {\n    node.error('[Ownership] pgReq helper not available');\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'pgReq_not_available' };\n    return [null, msg];\n}\n\nconst email = msg.cfIdentity && msg.cfIdentity.email;\nif (!email) {\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'missing_identity' };\n    return [null, msg];\n}\n\ntry {\n    // Lookup profile by email\n    const profiles = await pgReq('GET', '/profiles?email=eq.' + encodeURIComponent(email) + '&select=id,cliente_id');\n    if (!Array.isArray(profiles) || profiles.length === 0) {\n        msg.statusCode = 403;\n        msg.payload = { ok: false, error: 'profile_not_found' };\n        return [null, msg];\n    }\n    const profile = profiles[0];\n    msg.cfProfile = profile;\n\n    const p = msg.payload || {};\n\n    // Check credito ownership (if provided)\n    if (p.creditoId) {\n        const cs = await pgReq('GET', '/creditos_do_cliente?id=eq.' + encodeURIComponent(p.creditoId) + '&select=cliente_id');\n        if (!Array.isArray(cs) || cs.length === 0 || cs[0].cliente_id !== profile.cliente_id) {\n            msg.statusCode = 403;\n            msg.payload = { ok: false, error: 'credito_ownership_mismatch' };\n            return [null, msg];\n        }\n    }\n\n    // Check orcamento ownership (if provided)\n    if (p.orcamentoId) {\n        const os = await pgReq('GET', '/orcamentos?id=eq.' + encodeURIComponent(p.orcamentoId) + '&select=cliente_id');\n        if (!Array.isArray(os) || os.length === 0 || os[0].cliente_id !== profile.cliente_id) {\n            msg.statusCode = 403;\n            msg.payload = { ok: false, error: 'orcamento_ownership_mismatch' };\n            return [null, msg];\n        }\n    }\n\n    // Check utilizacao ownership (if provided)\n    if (p.utilizacaoId) {\n        const us = await pgReq('GET', '/utilizacoes_de_credito?id=eq.' + encodeURIComponent(p.utilizacaoId) + '&select=cliente_id');\n        if (!Array.isArray(us) || us.length === 0 || us[0].cliente_id !== profile.cliente_id) {\n            msg.statusCode = 403;\n            msg.payload = { ok: false, error: 'utilizacao_ownership_mismatch' };\n            return [null, msg];\n        }\n    }\n\n    return [msg, null];\n} catch (err) {\n    node.warn('[Ownership - Orcamentos] Check failed: ' + (err && err.message ? err.message : String(err)));\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'ownership_check_error' };\n    return [null, msg];\n}",
+        "func": "const pgReq = global.get('pgReq');\nif (typeof pgReq !== 'function') {\n    node.error('[authz] pgReq helper not available');\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'pgReq_not_available' };\n    return [null, msg];\n}\n\n// 1. Require cfIdentity upstream\nconst email = msg.cfIdentity && msg.cfIdentity.email;\nif (!email) {\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'missing_identity' };\n    return [null, msg];\n}\n\n// 2. Profile lookup for AUDIT ONLY (non-blocking \u2014 DEV bypass emails may not match)\ntry {\n    const pres = await pgReq('GET', '/profiles?email=eq.' + encodeURIComponent(email) + '&select=id');\n    if (pres && pres.statusCode === 200 && Array.isArray(pres.body) && pres.body.length > 0) {\n        msg.audit_profile_id = pres.body[0].id;\n    }\n} catch (e) {\n    node.warn('[authz] profile lookup failed (non-blocking): ' + (e && e.message ? e.message : String(e)));\n}\n\n// 3. Data-integrity check: if BOTH creditoId and orcamentoId are provided, they must\n//    belong to the same cliente. Single-resource flows skip the cross-check.\nconst p = msg.payload || {};\nconst creditoId = p.creditoId || p.creditoid || msg.creditoId;\nconst orcamentoId = p.orcamentoId || p.orcamentoid || msg.orcamentoId;\n\ntry {\n    if (creditoId && orcamentoId) {\n        const [cRes, oRes] = await Promise.all([\n            pgReq('GET', '/creditos_do_cliente?id=eq.' + encodeURIComponent(creditoId) + '&select=cliente_id'),\n            pgReq('GET', '/orcamentos?id=eq.' + encodeURIComponent(orcamentoId) + '&select=cliente_id')\n        ]);\n        if (cRes.statusCode !== 200 || !Array.isArray(cRes.body) || cRes.body.length === 0) {\n            msg.statusCode = 404;\n            msg.payload = { ok: false, error: 'credito_not_found' };\n            return [null, msg];\n        }\n        if (oRes.statusCode !== 200 || !Array.isArray(oRes.body) || oRes.body.length === 0) {\n            msg.statusCode = 404;\n            msg.payload = { ok: false, error: 'orcamento_not_found' };\n            return [null, msg];\n        }\n        if (cRes.body[0].cliente_id !== oRes.body[0].cliente_id) {\n            msg.statusCode = 403;\n            msg.payload = { ok: false, error: 'data_integrity_mismatch', detail: 'credito and orcamento belong to different clientes' };\n            return [null, msg];\n        }\n        msg.authz_cliente_id = cRes.body[0].cliente_id;\n    } else if (creditoId) {\n        // Single-resource existence check (fail fast if the id is bogus)\n        const cRes = await pgReq('GET', '/creditos_do_cliente?id=eq.' + encodeURIComponent(creditoId) + '&select=cliente_id');\n        if (cRes.statusCode !== 200 || !Array.isArray(cRes.body) || cRes.body.length === 0) {\n            msg.statusCode = 404;\n            msg.payload = { ok: false, error: 'credito_not_found' };\n            return [null, msg];\n        }\n        msg.authz_cliente_id = cRes.body[0].cliente_id;\n    } else if (orcamentoId) {\n        const oRes = await pgReq('GET', '/orcamentos?id=eq.' + encodeURIComponent(orcamentoId) + '&select=cliente_id');\n        if (oRes.statusCode !== 200 || !Array.isArray(oRes.body) || oRes.body.length === 0) {\n            msg.statusCode = 404;\n            msg.payload = { ok: false, error: 'orcamento_not_found' };\n            return [null, msg];\n        }\n        msg.authz_cliente_id = oRes.body[0].cliente_id;\n    }\n} catch (err) {\n    node.warn('[authz] integrity check failed: ' + (err && err.message ? err.message : String(err)));\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'authz_check_error' };\n    return [null, msg];\n}\n\nreturn [msg, null];\n",
         "outputs": 2,
         "timeout": 15,
         "noerr": 0,
@@ -207,7 +207,7 @@
         "y": 80,
         "wires": [
             [
-                "orc-util-validate"
+                "orc-util-cf"
             ]
         ]
     },
@@ -227,7 +227,7 @@
         "y": 80,
         "wires": [
             [
-                "orc-util-exec"
+                "orc-util-authz"
             ],
             [
                 "orc-util-out"
@@ -239,7 +239,7 @@
         "type": "function",
         "z": "orc-tab-credito-utilizar",
         "name": "Execute Registrar Utilizacao",
-        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = {\n            'apikey': SUPABASE_KEY,\n            'Authorization': 'Bearer ' + SUPABASE_KEY,\n            'Accept': 'application/json',\n            'Content-Type': 'application/json'\n        };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst orcamentoId = msg.orcamentoId;\nconst creditoId = msg.creditoId;\nconst valor = msg.valor;\n\ntry {\n    const creditoRes = await pgReq('GET', `/rest/v1/creditos_do_cliente?id=eq.${encodeURIComponent(creditoId)}&select=id,cliente_id,valor_disponivel,valor_utilizado,valor_do_credito`, null);\n    if (creditoRes.statusCode !== 200 || !Array.isArray(creditoRes.body) || creditoRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: `Credito '${creditoId}' not found` };\n        return msg;\n    }\n    const credito = creditoRes.body[0];\n    const disponivel = Number(credito.valor_disponivel || 0);\n    if (valor > disponivel) {\n        msg.statusCode = 400;\n        msg.payload = { ok: false, error: `Valor solicitado (${valor}) excede o disponivel (${disponivel})` };\n        return msg;\n    }\n\n    const orcRes = await pgReq('GET', `/rest/v1/orcamentos?id=eq.${encodeURIComponent(orcamentoId)}&select=id,cliente_id,numero_da_proposta`, null);\n    if (orcRes.statusCode !== 200 || !Array.isArray(orcRes.body) || orcRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: `Orcamento '${orcamentoId}' not found` };\n        return msg;\n    }\n    const orcamento = orcRes.body[0];\n\n    const novaUtilizacao = {\n        credito_id: creditoId,\n        orcamento_id: orcamentoId,\n        cliente_id: credito.cliente_id || orcamento.cliente_id,\n        valor_utilizado: valor,\n        tipo_de_utilizacao: 100000000,\n        utilizacao_firmada: false,\n        utilizacao_cancelada: false,\n        numero_da_proposta_orcamento: orcamento.numero_da_proposta || null\n    };\n    const createRes = await pgReq('POST', '/rest/v1/utilizacoes_de_credito', novaUtilizacao, { 'Prefer': 'return=representation' });\n    if (createRes.statusCode < 200 || createRes.statusCode >= 300 || !Array.isArray(createRes.body) || createRes.body.length === 0) {\n        msg.statusCode = 500;\n        const errBody = (createRes.body && (createRes.body.message || createRes.body.error)) || JSON.stringify(createRes.body);\n        msg.payload = { ok: false, error: `Failed to create utilizacao: HTTP ${createRes.statusCode} - ${errBody}` };\n        return msg;\n    }\n    const novaUtilId = createRes.body[0].id;\n\n    const novoValorUtilizado = Number(credito.valor_utilizado || 0) + valor;\n    const patchRes = await pgReq('PATCH', `/rest/v1/creditos_do_cliente?id=eq.${encodeURIComponent(creditoId)}`, {\n        valor_utilizado: novoValorUtilizado,\n        updated_at: new Date().toISOString()\n    }, { 'Prefer': 'return=representation' });\n    if (patchRes.statusCode < 200 || patchRes.statusCode >= 300) {\n        await pgReq('DELETE', `/rest/v1/utilizacoes_de_credito?id=eq.${encodeURIComponent(novaUtilId)}`, null);\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: `Failed to update credito (rolled back utilizacao): HTTP ${patchRes.statusCode}` };\n        return msg;\n    }\n    const creditoAtualizado = Array.isArray(patchRes.body) && patchRes.body.length > 0 ? patchRes.body[0] : null;\n\n    msg.statusCode = 200;\n    msg.payload = {\n        ok: true,\n        utilizacaoId: novaUtilId,\n        valorUtilizado: creditoAtualizado ? creditoAtualizado.valor_utilizado : novoValorUtilizado,\n        valorDisponivel: creditoAtualizado ? creditoAtualizado.valor_disponivel : (Number(credito.valor_do_credito || 0) - novoValorUtilizado)\n    };\n    return msg;\n} catch (err) {\n    node.error('[registrar-utilizacao] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "func": "const pgReq = global.get('pgReq');\nif (typeof pgReq !== 'function') {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'pgReq_not_available' };\n    return msg;\n}\nconst orcamentoId = msg.orcamentoId;\nconst creditoId = msg.creditoId;\nconst valor = msg.valor;\ntry {\n    const res = await pgReq('POST', '/rpc/increment_credito_utilizacao', {\n        p_credito_id: creditoId,\n        p_valor: valor,\n        p_orcamento_id: orcamentoId\n    });\n    if (res.statusCode !== 200) {\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: 'rpc_error', detail: res.body };\n        return msg;\n    }\n    const r = res.body || {};\n    if (!r.success) {\n        msg.statusCode = 409;\n        msg.payload = { ok: false, reason: r.reason || 'unknown' };\n        return msg;\n    }\n    msg.statusCode = 200;\n    msg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\n    msg.payload = { ok: true, new_valor_utilizado: r.new_valor_utilizado };\n    return msg;\n} catch (err) {\n    node.error('[util-exec] ' + (err && err.message ? err.message : String(err)), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'exec_error' };\n    return msg;\n}\n",
         "outputs": 1,
         "timeout": 60,
         "noerr": 0,
@@ -335,7 +335,7 @@
         "y": 80,
         "wires": [
             [
-                "orc-cancel-validate"
+                "orc-cancel-cf"
             ]
         ]
     },
@@ -463,7 +463,7 @@
         "y": 80,
         "wires": [
             [
-                "orc-firmar-validate-http"
+                "orc-firmar-cf"
             ]
         ]
     },
@@ -483,7 +483,7 @@
         "y": 80,
         "wires": [
             [
-                "orc-firmar-exec"
+                "orc-firmar-authz"
             ],
             [
                 "orc-firmar-out"
@@ -670,7 +670,7 @@
         "y": 80,
         "wires": [
             [
-                "orc-reemb-validate"
+                "orc-reemb-cf"
             ]
         ]
     },
@@ -690,7 +690,7 @@
         "y": 80,
         "wires": [
             [
-                "orc-reemb-exec"
+                "orc-reemb-authz"
             ],
             [
                 "orc-reemb-out"
@@ -702,7 +702,7 @@
         "type": "function",
         "z": "orc-tab-credito-reembolso",
         "name": "Execute Reembolso",
-        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst creditoId = msg.creditoId;\nconst valor = msg.valor;\n\ntry {\n    const credRes = await pgReq('GET', `/rest/v1/creditos_do_cliente?id=eq.${encodeURIComponent(creditoId)}&select=id,cliente_id,valor_disponivel,valor_utilizado,valor_do_credito`, null);\n    if (credRes.statusCode !== 200 || !Array.isArray(credRes.body) || credRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: `Credito '${creditoId}' not found` };\n        return msg;\n    }\n    const credito = credRes.body[0];\n    const disponivel = Number(credito.valor_disponivel || 0);\n    if (valor > disponivel) {\n        msg.statusCode = 400;\n        msg.payload = { ok: false, error: `Valor solicitado (${valor}) excede o disponivel (${disponivel})` };\n        return msg;\n    }\n\n    const novaUtilizacao = {\n        credito_id: creditoId,\n        orcamento_id: null,\n        cliente_id: credito.cliente_id,\n        valor_utilizado: valor,\n        tipo_de_utilizacao: 100000001,\n        utilizacao_firmada: true,\n        utilizacao_cancelada: false\n    };\n    const createRes = await pgReq('POST', '/rest/v1/utilizacoes_de_credito', novaUtilizacao, { 'Prefer': 'return=representation' });\n    if (createRes.statusCode < 200 || createRes.statusCode >= 300 || !Array.isArray(createRes.body) || createRes.body.length === 0) {\n        msg.statusCode = 500;\n        const errBody = (createRes.body && (createRes.body.message || createRes.body.error)) || JSON.stringify(createRes.body);\n        msg.payload = { ok: false, error: `Failed to create reembolso utilizacao: HTTP ${createRes.statusCode} - ${errBody}` };\n        return msg;\n    }\n    const novaUtilId = createRes.body[0].id;\n\n    const novoValorUtilizado = Number(credito.valor_utilizado || 0) + valor;\n    const patchRes = await pgReq('PATCH', `/rest/v1/creditos_do_cliente?id=eq.${encodeURIComponent(creditoId)}`, {\n        valor_utilizado: novoValorUtilizado,\n        updated_at: new Date().toISOString()\n    }, { 'Prefer': 'return=representation' });\n    if (patchRes.statusCode < 200 || patchRes.statusCode >= 300) {\n        await pgReq('DELETE', `/rest/v1/utilizacoes_de_credito?id=eq.${encodeURIComponent(novaUtilId)}`, null);\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: `Failed to update credito (rolled back reembolso): HTTP ${patchRes.statusCode}` };\n        return msg;\n    }\n    const creditoAtualizado = Array.isArray(patchRes.body) && patchRes.body.length > 0 ? patchRes.body[0] : null;\n\n    msg.statusCode = 200;\n    msg.payload = {\n        ok: true,\n        utilizacaoId: novaUtilId,\n        valorUtilizado: creditoAtualizado ? creditoAtualizado.valor_utilizado : novoValorUtilizado,\n        valorDisponivel: creditoAtualizado ? creditoAtualizado.valor_disponivel : (Number(credito.valor_do_credito || 0) - novoValorUtilizado)\n    };\n    return msg;\n} catch (err) {\n    node.error('[registrar-reembolso] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "func": "const pgReq = global.get('pgReq');\nif (typeof pgReq !== 'function') {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'pgReq_not_available' };\n    return msg;\n}\nconst creditoId = msg.creditoId;\nconst valor = msg.valor;\ntry {\n    const res = await pgReq('POST', '/rpc/rpc_registrar_reembolso_credito', {\n        p_credito_id: creditoId,\n        p_valor: valor\n    });\n    if (res.statusCode !== 200) {\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: 'rpc_error', detail: res.body };\n        return msg;\n    }\n    const r = res.body || {};\n    if (!r.success) {\n        msg.statusCode = 409;\n        msg.payload = { ok: false, reason: r.reason || 'unknown' };\n        return msg;\n    }\n    msg.statusCode = 200;\n    msg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\n    msg.payload = { ok: true, new_valor_utilizado: r.new_valor_utilizado };\n    return msg;\n} catch (err) {\n    node.error('[reemb-exec] ' + (err && err.message ? err.message : String(err)), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'exec_error' };\n    return msg;\n}\n",
         "outputs": 1,
         "timeout": 60,
         "noerr": 0,
@@ -798,7 +798,7 @@
         "y": 80,
         "wires": [
             [
-                "orc-devol-validate"
+                "orc-devol-cf"
             ]
         ]
     },
@@ -807,7 +807,7 @@
         "type": "function",
         "z": "orc-tab-credito-devolucao-os",
         "name": "Validate Input",
-        "func": "const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst body = msg.payload || {};\nconst prodOsId = body.prodOsId || body.prodosId;\nconst itemOrcamentoId = body.itemOrcamentoId || body.itemorcamentoid;\nconst prodOsQuantidade = Number(body.prodOsQuantidade !== undefined ? body.prodOsQuantidade : body.prodosQuantidade);\n\nif (!prodOsId || typeof prodOsId !== 'string' || prodOsId.length < 8) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'prodOsId must be provided (for bookkeeping)' };\n    return [null, msg];\n}\nif (!itemOrcamentoId || !UUID_RE.test(itemOrcamentoId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'itemOrcamentoId must be a valid UUID' };\n    return [null, msg];\n}\nif (!isFinite(prodOsQuantidade) || prodOsQuantidade <= 0) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'prodOsQuantidade must be a positive number' };\n    return [null, msg];\n}\n\nmsg.prodOsId = prodOsId;\nmsg.itemOrcamentoId = itemOrcamentoId;\nmsg.prodOsQuantidade = prodOsQuantidade;\nreturn [msg, null];",
+        "func": "const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst body = msg.payload || {};\nconst prodOsId = body.prodOsId || body.prodosId;\nconst itemOrcamentoId = body.itemOrcamentoId || body.itemorcamentoid;\nconst prodOsQuantidade = Number(body.prodOsQuantidade !== undefined ? body.prodOsQuantidade : body.prodosQuantidade);\n\nif (!prodOsId || typeof prodOsId !== 'string') {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'invalid_prodOsId' };\n    return [null, msg];\n}\nif (prodOsId.length > 64) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'invalid_prodOsId_length' };\n    return [null, msg];\n}\nif (!UUID_RE.test(prodOsId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'invalid_prodOsId_format' };\n    return [null, msg];\n}\nif (!itemOrcamentoId || !UUID_RE.test(itemOrcamentoId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'itemOrcamentoId must be a valid UUID' };\n    return [null, msg];\n}\nif (!isFinite(prodOsQuantidade) || prodOsQuantidade <= 0) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'prodOsQuantidade must be a positive number' };\n    return [null, msg];\n}\n\nmsg.prodOsId = prodOsId;\nmsg.itemOrcamentoId = itemOrcamentoId;\nmsg.prodOsQuantidade = prodOsQuantidade;\nreturn [msg, null];\n",
         "outputs": 2,
         "timeout": 0,
         "noerr": 0,
@@ -3433,6 +3433,134 @@
         "wires": [
             [
                 "orc-pub-err-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-util-cf",
+        "type": "subflow:orc-subflow-cf-access",
+        "z": "orc-tab-credito-utilizar",
+        "name": "CF Access",
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "orc-util-validate"
+            ],
+            [
+                "orc-util-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-util-authz",
+        "type": "subflow:orc-subflow-ownership-check",
+        "z": "orc-tab-credito-utilizar",
+        "name": "Authz",
+        "x": 800,
+        "y": 80,
+        "wires": [
+            [
+                "orc-util-exec"
+            ],
+            [
+                "orc-util-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cancel-cf",
+        "type": "subflow:orc-subflow-cf-access",
+        "z": "orc-tab-credito-cancelar",
+        "name": "CF Access",
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cancel-validate"
+            ],
+            [
+                "orc-cancel-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-firmar-cf",
+        "type": "subflow:orc-subflow-cf-access",
+        "z": "orc-tab-credito-firmar",
+        "name": "CF Access",
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "orc-firmar-validate-http"
+            ],
+            [
+                "orc-firmar-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-firmar-authz",
+        "type": "subflow:orc-subflow-ownership-check",
+        "z": "orc-tab-credito-firmar",
+        "name": "Authz",
+        "x": 800,
+        "y": 80,
+        "wires": [
+            [
+                "orc-firmar-exec"
+            ],
+            [
+                "orc-firmar-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-reemb-cf",
+        "type": "subflow:orc-subflow-cf-access",
+        "z": "orc-tab-credito-reembolso",
+        "name": "CF Access",
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "orc-reemb-validate"
+            ],
+            [
+                "orc-reemb-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-reemb-authz",
+        "type": "subflow:orc-subflow-ownership-check",
+        "z": "orc-tab-credito-reembolso",
+        "name": "Authz",
+        "x": 800,
+        "y": 80,
+        "wires": [
+            [
+                "orc-reemb-exec"
+            ],
+            [
+                "orc-reemb-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-devol-cf",
+        "type": "subflow:orc-subflow-cf-access",
+        "z": "orc-tab-credito-devolucao-os",
+        "name": "CF Access",
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "orc-devol-validate"
+            ],
+            [
+                "orc-devol-out"
             ]
         ]
     }
