@@ -1,5 +1,138 @@
 [
     {
+        "id": "orc-subflow-cf-access",
+        "type": "subflow",
+        "name": "CF Access Validate",
+        "info": "Validates Cloudflare Access JWT. Caches JWKS for 1hr.\\n\\nOutputs:\\n- [0] Authenticated: msg.cfIdentity set\\n- [1] Unauthorized: msg.statusCode=401",
+        "category": "Orcamentos",
+        "in": [
+            {
+                "x": 40,
+                "y": 100,
+                "wires": [
+                    {
+                        "id": "orc-fn-cf-access"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 700,
+                "y": 60,
+                "wires": [
+                    {
+                        "id": "orc-fn-cf-access",
+                        "port": 0
+                    }
+                ]
+            },
+            {
+                "x": 700,
+                "y": 140,
+                "wires": [
+                    {
+                        "id": "orc-fn-cf-access",
+                        "port": 1
+                    }
+                ]
+            }
+        ],
+        "env": [],
+        "meta": {},
+        "color": "#F6A623"
+    },
+    {
+        "id": "orc-fn-cf-access",
+        "type": "function",
+        "z": "orc-subflow-cf-access",
+        "name": "Validate JWT",
+        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.cfIdentity = { email: 'dev-bypass@local', dev: true };\n    return [msg, null];\n}\n\nconst CF_TEAM_DOMAIN = env.get('CF_ACCESS_TEAM_DOMAIN') || 'uniumautomacao.cloudflareaccess.com';\nconst CF_AUD = env.get('CF_ACCESS_AUD');\n\nif (!CF_AUD) {\n    msg.statusCode = 500;\n    msg.payload = { error: 'CF_ACCESS_AUD not configured' };\n    return [null, msg];\n}\n\nconst jwt = msg.req && msg.req.headers && msg.req.headers['cf-access-jwt-assertion'];\nif (!jwt) {\n    msg.statusCode = 401;\n    msg.payload = { error: 'Missing CF Access JWT' };\n    return [null, msg];\n}\n\ntry {\n    const parts = jwt.split('.');\n    if (parts.length !== 3) throw new Error('Invalid JWT format');\n\n    const header = JSON.parse(Buffer.from(parts[0], 'base64url').toString());\n    if (header.alg !== 'RS256') throw new Error('Unexpected JWT algorithm: ' + header.alg);\n    const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());\n\n    if (!payload.exp || payload.exp < Math.floor(Date.now() / 1000)) {\n        throw new Error('Token expired');\n    }\n    if (!payload.aud || (Array.isArray(payload.aud) ? !payload.aud.includes(CF_AUD) : payload.aud !== CF_AUD)) {\n        throw new Error('Invalid audience');\n    }\n    const expectedIssuer = 'https://' + CF_TEAM_DOMAIN;\n    if (payload.iss !== expectedIssuer) {\n        throw new Error('Invalid issuer: ' + payload.iss);\n    }\n\n    const cacheKey = '_cf_jwks_orcamentos';\n    let jwks = flow.get(cacheKey);\n    const now = Date.now();\n    if (!jwks || !jwks.keys || !jwks.fetchedAt || (now - jwks.fetchedAt > 3600000)) {\n        const jwksUrl = 'https://' + CF_TEAM_DOMAIN + '/cdn-cgi/access/certs';\n        const jwksData = await new Promise((resolve, reject) => {\n            const urlObj = new URL(jwksUrl);\n            const req = httpsLib.request({ hostname: urlObj.hostname, path: urlObj.pathname, method: 'GET' }, (r) => {\n                let data = '';\n                r.on('data', c => data += c);\n                r.on('end', () => { try { resolve(JSON.parse(data)); } catch(e) { reject(new Error('JWKS parse error')); } });\n            });\n            req.setTimeout(10000, () => { req.destroy(new Error('JWKS fetch timeout')); });\n            req.on('error', reject);\n            req.end();\n        });\n        jwks = { keys: jwksData.keys, fetchedAt: now };\n        flow.set(cacheKey, jwks);\n    }\n\n    const kid = header.kid;\n    const jwk = jwks.keys.find(k => k.kid === kid);\n    if (!jwk) throw new Error('No matching JWK for kid: ' + kid);\n\n    const pubKey = cryptoLib.createPublicKey({ key: jwk, format: 'jwk' });\n    const signatureInput = parts[0] + '.' + parts[1];\n    const signature = Buffer.from(parts[2], 'base64url');\n    const isValid = cryptoLib.verify('RSA-SHA256', Buffer.from(signatureInput), pubKey, signature);\n\n    if (!isValid) throw new Error('Invalid JWT signature');\n\n    msg.cfIdentity = payload;\n    return [msg, null];\n} catch (err) {\n    node.warn('[CF Access - Orcamentos] Validation failed: ' + err.message);\n    msg.statusCode = 401;\n    msg.payload = { error: 'Unauthorized' };\n    return [null, msg];\n}",
+        "outputs": 2,
+        "timeout": 15,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [
+            {
+                "var": "httpsLib",
+                "module": "https"
+            },
+            {
+                "var": "cryptoLib",
+                "module": "crypto"
+            }
+        ],
+        "x": 360,
+        "y": 100,
+        "wires": [
+            [],
+            []
+        ]
+    },
+    {
+        "id": "orc-subflow-ownership-check",
+        "type": "subflow",
+        "name": "Ownership Check",
+        "info": "Validates that the authenticated user (via msg.cfIdentity.email) owns the target resources.\n\nChecks any of the following if provided in msg.payload:\n- creditoId -> creditos_do_cliente.cliente_id\n- orcamentoId -> orcamentos.cliente_id\n- utilizacaoId -> utilizacoes_de_credito.cliente_id\n\nSets msg.cfProfile = { id, cliente_id } on success.\n\nOutputs:\n- [0] Authorized: msg.cfProfile set\n- [1] Unauthorized/Forbidden: msg.statusCode=401|403",
+        "category": "Orcamentos",
+        "in": [
+            {
+                "x": 40,
+                "y": 100,
+                "wires": [
+                    {
+                        "id": "orc-fn-ownership-check"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 700,
+                "y": 60,
+                "wires": [
+                    {
+                        "id": "orc-fn-ownership-check",
+                        "port": 0
+                    }
+                ]
+            },
+            {
+                "x": 700,
+                "y": 140,
+                "wires": [
+                    {
+                        "id": "orc-fn-ownership-check",
+                        "port": 1
+                    }
+                ]
+            }
+        ],
+        "env": [],
+        "meta": {},
+        "color": "#87A980"
+    },
+    {
+        "id": "orc-fn-ownership-check",
+        "type": "function",
+        "z": "orc-subflow-ownership-check",
+        "name": "Check Ownership",
+        "func": "const pgReq = global.get('pgReq');\nif (typeof pgReq !== 'function') {\n    node.error('[Ownership] pgReq helper not available');\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'pgReq_not_available' };\n    return [null, msg];\n}\n\nconst email = msg.cfIdentity && msg.cfIdentity.email;\nif (!email) {\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'missing_identity' };\n    return [null, msg];\n}\n\ntry {\n    // Lookup profile by email\n    const profiles = await pgReq('GET', '/profiles?email=eq.' + encodeURIComponent(email) + '&select=id,cliente_id');\n    if (!Array.isArray(profiles) || profiles.length === 0) {\n        msg.statusCode = 403;\n        msg.payload = { ok: false, error: 'profile_not_found' };\n        return [null, msg];\n    }\n    const profile = profiles[0];\n    msg.cfProfile = profile;\n\n    const p = msg.payload || {};\n\n    // Check credito ownership (if provided)\n    if (p.creditoId) {\n        const cs = await pgReq('GET', '/creditos_do_cliente?id=eq.' + encodeURIComponent(p.creditoId) + '&select=cliente_id');\n        if (!Array.isArray(cs) || cs.length === 0 || cs[0].cliente_id !== profile.cliente_id) {\n            msg.statusCode = 403;\n            msg.payload = { ok: false, error: 'credito_ownership_mismatch' };\n            return [null, msg];\n        }\n    }\n\n    // Check orcamento ownership (if provided)\n    if (p.orcamentoId) {\n        const os = await pgReq('GET', '/orcamentos?id=eq.' + encodeURIComponent(p.orcamentoId) + '&select=cliente_id');\n        if (!Array.isArray(os) || os.length === 0 || os[0].cliente_id !== profile.cliente_id) {\n            msg.statusCode = 403;\n            msg.payload = { ok: false, error: 'orcamento_ownership_mismatch' };\n            return [null, msg];\n        }\n    }\n\n    // Check utilizacao ownership (if provided)\n    if (p.utilizacaoId) {\n        const us = await pgReq('GET', '/utilizacoes_de_credito?id=eq.' + encodeURIComponent(p.utilizacaoId) + '&select=cliente_id');\n        if (!Array.isArray(us) || us.length === 0 || us[0].cliente_id !== profile.cliente_id) {\n            msg.statusCode = 403;\n            msg.payload = { ok: false, error: 'utilizacao_ownership_mismatch' };\n            return [null, msg];\n        }\n    }\n\n    return [msg, null];\n} catch (err) {\n    node.warn('[Ownership - Orcamentos] Check failed: ' + (err && err.message ? err.message : String(err)));\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'ownership_check_error' };\n    return [null, msg];\n}",
+        "outputs": 2,
+        "timeout": 15,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 360,
+        "y": 100,
+        "wires": [
+            [],
+            []
+        ]
+    },
+    {
         "id": "orc-tab-health",
         "type": "tab",
         "label": "Health",
