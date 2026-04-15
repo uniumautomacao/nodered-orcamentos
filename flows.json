@@ -4,7 +4,7 @@
         "type": "tab",
         "label": "Health",
         "disabled": false,
-        "info": "GET /health \u2014 Returns module status. Used for liveness/readiness checks."
+        "info": "GET /health — Returns module status. Used for liveness/readiness checks."
     },
     {
         "id": "orc-health-in",
@@ -210,7 +210,7 @@
         "type": "tab",
         "label": "Credito - Cancelar Utilizacao",
         "disabled": false,
-        "info": "POST /orcamentos/creditos/cancelar-utilizacao\n\nBody: { token, id } (id = utilizacao uuid)\n\nLogic (from PA `(Cr\u00e9dito do Cliente) - Cancelar Utiliza\u00e7\u00e3o de Cr\u00e9dito`):\n1. Load utilizacao\n2. If already utilizacao_firmada=true -> no-op (aligned with PA behavior)\n3. Mark utilizacao_cancelada=true\n4. Decrement credito.valor_utilizado by utilizacao.valor_utilizado\n\nResponse: { ok: true, id, cancelled: boolean, reason? }"
+        "info": "POST /orcamentos/creditos/cancelar-utilizacao\n\nBody: { token, id } (id = utilizacao uuid)\n\nLogic (from PA `(Crédito do Cliente) - Cancelar Utilização de Crédito`):\n1. Load utilizacao\n2. If already utilizacao_firmada=true -> no-op (aligned with PA behavior)\n3. Mark utilizacao_cancelada=true\n4. Decrement credito.valor_utilizado by utilizacao.valor_utilizado\n\nResponse: { ok: true, id, cancelled: boolean, reason? }"
     },
     {
         "id": "orc-cancel-in",
@@ -361,7 +361,7 @@
         "type": "tab",
         "label": "Credito - Firmar Utilizacoes",
         "disabled": false,
-        "info": "POST /orcamentos/creditos/firmar-utilizacoes\n\nBody: { token, orcamentoId } (also accepts orcamentoid alias)\n\nAlso callable internally via link-in node 'firmar-utilizacoes-internal' (msg.orcamentoId set by caller).\nUsed by publicar-pedido (Batch 6).\n\nLogic (from PA `(Cr\u00e9dito do Cliente) - Firmar Utiliza\u00e7\u00f5es de um or\u00e7amento`):\n1. GET utilizacoes_de_credito for orcamento where utilizacao_cancelada != true\n2. For each: PATCH utilizacao_firmada=true\n\nResponse: { ok: true, orcamentoId, count }"
+        "info": "POST /orcamentos/creditos/firmar-utilizacoes\n\nBody: { token, orcamentoId } (also accepts orcamentoid alias)\n\nAlso callable internally via link-in node 'firmar-utilizacoes-internal' (msg.orcamentoId set by caller).\nUsed by publicar-pedido (Batch 6).\n\nLogic (from PA `(Crédito do Cliente) - Firmar Utilizações de um orçamento`):\n1. GET utilizacoes_de_credito for orcamento where utilizacao_cancelada != true\n2. For each: PATCH utilizacao_firmada=true\n\nResponse: { ok: true, orcamentoId, count }"
     },
     {
         "id": "orc-firmar-in",
@@ -589,7 +589,7 @@
         "type": "tab",
         "label": "Credito - Registrar Reembolso",
         "disabled": false,
-        "info": "POST /orcamentos/creditos/registrar-reembolso\n\nBody: { token, creditoid, valor }\n\nLogic (from PA `(Cr\u00e9dito do Cliente) - Registrar Reembolso de Cr\u00e9dito`):\n1. Validate valor > 0\n2. Load credito; verify valor <= valor_disponivel\n3. Create utilizacoes_de_credito: tipo_de_utilizacao=100000001 (reembolso), utilizacao_firmada=true, orcamento_id=null\n4. Update credito.valor_utilizado += valor\n\nResponse: { ok: true, utilizacaoId, valorUtilizado, valorDisponivel }"
+        "info": "POST /orcamentos/creditos/registrar-reembolso\n\nBody: { token, creditoid, valor }\n\nLogic (from PA `(Crédito do Cliente) - Registrar Reembolso de Crédito`):\n1. Validate valor > 0\n2. Load credito; verify valor <= valor_disponivel\n3. Create utilizacoes_de_credito: tipo_de_utilizacao=100000001 (reembolso), utilizacao_firmada=true, orcamento_id=null\n4. Update credito.valor_utilizado += valor\n\nResponse: { ok: true, utilizacaoId, valorUtilizado, valorDisponivel }"
     },
     {
         "id": "orc-reemb-in",
@@ -740,7 +740,7 @@
         "type": "tab",
         "label": "Credito - Gerar de Devolucao OS",
         "disabled": false,
-        "info": "POST /orcamentos/creditos/gerar-de-devolucao-os\n\nBody: { token, prodOsId, itemOrcamentoId, prodOsQuantidade }\n\nSince produtos_servico in Supabase is missing opcao_de_devolucao and item_de_orcamento_id columns, the caller MUST pass prodOsId (identifier for bookkeeping only) and prodOsQuantidade (read from Dataverse prodos.quantidade upstream).\n\nLogic (from PA `(Cr\u00e9dito do Cliente) - Gerar Cr\u00e9dito de devolu\u00e7\u00e3o de OS`):\n1. GET itens_de_orcamento[itemOrcamentoId] for quantidade_disponivel_devolucao, valor_devolucao_disponivel, orcamento_id\n2. GET orcamentos[orcamento_id] -> cliente_id\n3. Branch:\n   - If quantidade_disponivel_devolucao >= prodOsQuantidade -> credit of full valor_devolucao_disponivel\n   - Else -> credit of (valor_devolucao_disponivel / quantidade_disponivel_devolucao) * prodOsQuantidade\n4. Create creditos_do_cliente row\n5. Update item.quantidade_devolvida += prodOsQuantidade\n6. NOTE: PA also updates prodos.opcao_de_devolucao=100000002; Supabase produtos_servico lacks this column. Caller must update Dataverse separately.\n\nResponse: { ok: true, creditoId, valorDoCredito, branch, produtosServicoUpdated: false, note }"
+        "info": "POST /orcamentos/creditos/gerar-de-devolucao-os\n\nBody: { token, prodOsId, itemOrcamentoId, prodOsQuantidade }\n\nSince produtos_servico in Supabase is missing opcao_de_devolucao and item_de_orcamento_id columns, the caller MUST pass prodOsId (identifier for bookkeeping only) and prodOsQuantidade (read from Dataverse prodos.quantidade upstream).\n\nLogic (from PA `(Crédito do Cliente) - Gerar Crédito de devolução de OS`):\n1. GET itens_de_orcamento[itemOrcamentoId] for quantidade_disponivel_devolucao, valor_devolucao_disponivel, orcamento_id\n2. GET orcamentos[orcamento_id] -> cliente_id\n3. Branch:\n   - If quantidade_disponivel_devolucao >= prodOsQuantidade -> credit of full valor_devolucao_disponivel\n   - Else -> credit of (valor_devolucao_disponivel / quantidade_disponivel_devolucao) * prodOsQuantidade\n4. Create creditos_do_cliente row\n5. Update item.quantidade_devolvida += prodOsQuantidade\n6. NOTE: PA also updates prodos.opcao_de_devolucao=100000002; Supabase produtos_servico lacks this column. Caller must update Dataverse separately.\n\nResponse: { ok: true, creditoId, valorDoCredito, branch, produtosServicoUpdated: false, note }"
     },
     {
         "id": "orc-devol-in",
@@ -891,7 +891,7 @@
         "type": "tab",
         "label": "Notificar Novo Pedido",
         "disabled": false,
-        "info": "POST /orcamentos/notificar-novo-pedido\n\nBody: { token, orcamentoid }\n\nPLACEHOLDER implementation. PA '(Notification) - Notificar cria\u00e7\u00e3o de novo pedido' posts Teams messages via Teams Bot to users in notification_preferences. Neither entity is migrated to Supabase, and Teams Graph API integration requires credentials not yet provisioned. This flow currently logs the event and returns ok:true,notified:false. FIX pending: wire to Teams Graph API / migrated notification_preferences table."
+        "info": "POST /orcamentos/notificar-novo-pedido\n\nBody: { token, orcamentoid }\n\nPLACEHOLDER implementation. PA '(Notification) - Notificar criação de novo pedido' posts Teams messages via Teams Bot to users in notification_preferences. Neither entity is migrated to Supabase, and Teams Graph API integration requires credentials not yet provisioned. This flow currently logs the event and returns ok:true,notified:false. FIX pending: wire to Teams Graph API / migrated notification_preferences table."
     },
     {
         "id": "orc-notif-pedido-in",
@@ -961,7 +961,7 @@
         "type": "function",
         "z": "orc-tab-notif-pedido",
         "name": "Execute",
-        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst orcamentoId = msg.orcamentoId;\ntry {\n    const orcRes = await pgReq('GET', `/rest/v1/orcamentos?id=eq.${encodeURIComponent(orcamentoId)}&select=id,nome_do_cliente,numero_da_proposta,valor_total_com_desconto,consultor_id,pedido_pdf_id`, null);\n    if (orcRes.statusCode !== 200 || !Array.isArray(orcRes.body) || orcRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: `Orcamento '${orcamentoId}' not found` };\n        return msg;\n    }\n    const orc = orcRes.body[0];\n    // PLACEHOLDER: PA '(Notification) - Notificar cria\u00e7\u00e3o de novo pedido' posts Teams messages to consultants\n    // matching notification_preferences.new_novopedido=true. Both 'notification_preferences' entity and\n    // Teams Graph API integration are NOT yet migrated to Supabase/Node-RED. Logging event for observability.\n    node.log(`[notificar-novo-pedido] Event: orcamento=${orcamentoId} cliente='${orc.nome_do_cliente || '?'}' proposta=${orc.numero_da_proposta || '?'} valor=${orc.valor_total_com_desconto || 0} consultor=${orc.consultor_id || 'none'} pedido_pdf=${orc.pedido_pdf_id || 'none'}`);\n    msg.statusCode = 200;\n    msg.payload = { ok: true, notified: false, reason: 'not-implemented-dev-placeholder', orcamentoId: orcamentoId, logged: true };\n    return msg;\n} catch (err) {\n    node.error('[notificar-novo-pedido] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst orcamentoId = msg.orcamentoId;\ntry {\n    const orcRes = await pgReq('GET', `/rest/v1/orcamentos?id=eq.${encodeURIComponent(orcamentoId)}&select=id,nome_do_cliente,numero_da_proposta,valor_total_com_desconto,consultor_id,pedido_pdf_id`, null);\n    if (orcRes.statusCode !== 200 || !Array.isArray(orcRes.body) || orcRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: `Orcamento '${orcamentoId}' not found` };\n        return msg;\n    }\n    const orc = orcRes.body[0];\n    // PLACEHOLDER: PA '(Notification) - Notificar criação de novo pedido' posts Teams messages to consultants\n    // matching notification_preferences.new_novopedido=true. Both 'notification_preferences' entity and\n    // Teams Graph API integration are NOT yet migrated to Supabase/Node-RED. Logging event for observability.\n    node.log(`[notificar-novo-pedido] Event: orcamento=${orcamentoId} cliente='${orc.nome_do_cliente || '?'}' proposta=${orc.numero_da_proposta || '?'} valor=${orc.valor_total_com_desconto || 0} consultor=${orc.consultor_id || 'none'} pedido_pdf=${orc.pedido_pdf_id || 'none'}`);\n    msg.statusCode = 200;\n    msg.payload = { ok: true, notified: false, reason: 'not-implemented-dev-placeholder', orcamentoId: orcamentoId, logged: true };\n    return msg;\n} catch (err) {\n    node.error('[notificar-novo-pedido] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
         "outputs": 1,
         "timeout": 60,
         "noerr": 0,
@@ -1042,7 +1042,7 @@
         "type": "tab",
         "label": "Item - Inserir Sobreposicao",
         "disabled": false,
-        "info": "POST /orcamentos/itens/on-create\n\nBody: { token, itemid }\n\nPer PA '(Item de Or\u00e7amento) - Quando um item \u00e9 criado, inserir valor de sobreposi\u00e7\u00e3o vigente':\nLoads item; if valor_de_sobreposicao OR valor_servico_de_sobreposicao is null/0/negative AND produto_id set:\n  Fetches precos_de_produto.{preco_de_venda, preco_servico_instalacao}\n  If preco_de_venda > 0, patches item with both sobreposicao values.\nReturns { ok, applied, itemId, reason? }."
+        "info": "POST /orcamentos/itens/on-create\n\nBody: { token, itemid }\n\nPer PA '(Item de Orçamento) - Quando um item é criado, inserir valor de sobreposição vigente':\nLoads item; if valor_de_sobreposicao OR valor_servico_de_sobreposicao is null/0/negative AND produto_id set:\n  Fetches precos_de_produto.{preco_de_venda, preco_servico_instalacao}\n  If preco_de_venda > 0, patches item with both sobreposicao values.\nReturns { ok, applied, itemId, reason? }."
     },
     {
         "id": "orc-item-sobre-in",
@@ -1193,7 +1193,7 @@
         "type": "tab",
         "label": "Desmembrar Kits",
         "disabled": false,
-        "info": "POST /orcamentos/desmembrar-kits\n\nBody: { token, orcamentoid }\n\nPer PA '(Or\u00e7amento) - Desmembrar Kits':\nPhase A: for each kit item (opcao_de_fornecimento=100000000, kit=true, state_code=0, removido!=true):\n  list itens_de_kit children; for each, create a non-kit item with qty = parent.qty * child.qty.\n  Delete original kit item.\nPhase B: group remaining items by (produto_id, section, ambiente); for groups with >=2 items,\n  create one consolidated item with summed qty, then delete duplicates.\nReturns counts for both phases."
+        "info": "POST /orcamentos/desmembrar-kits\n\nBody: { token, orcamentoid }\n\nPer PA '(Orçamento) - Desmembrar Kits':\nPhase A: for each kit item (opcao_de_fornecimento=100000000, kit=true, state_code=0, removido!=true):\n  list itens_de_kit children; for each, create a non-kit item with qty = parent.qty * child.qty.\n  Delete original kit item.\nPhase B: group remaining items by (produto_id, section, ambiente); for groups with >=2 items,\n  create one consolidated item with summed qty, then delete duplicates.\nReturns counts for both phases."
     },
     {
         "id": "orc-desmembrar-in",
@@ -1344,7 +1344,7 @@
         "type": "tab",
         "label": "Pedidos PDF - Sync (core)",
         "disabled": false,
-        "info": "POST /orcamentos/pedidos-pdf/sync\n\nBody: {spItem} \u2014 single SharePoint item payload (all fields optional).\n\nPLACEHOLDER implementation. PA '(Pedidos em PDF) - Sharepoint\u2192Dataverse dataflow' refreshes a Power Automate Dataflow (id ef45bbfa-f86a-4b94-9fd8-46f6c3c22ea9) that maps SharePoint list 'Novos Pedidos' in /sites/vendas to Dataverse cr22f_uniumpedidoempdfs via Power Query M scripts. This endpoint is the core sync subflow and is HTTP-callable by /sync-manual and /on-upload. When the M-script mapping is migrated to Node-RED + Graph API, this flow should: (1) receive a single SP list item payload (fields + id + url); (2) lookup existence in public.pedidos_pdf by nome_do_arquivo+link_do_arquivo; (3) POST (create) or PATCH (update) accordingly; (4) return {ok:true, action, pedidoPdfId}. Requires Graph API app credentials (not yet provisioned on orcamentos container).\n"
+        "info": "POST /orcamentos/pedidos-pdf/sync\n\nBody: {spItem} — single SharePoint item payload (all fields optional).\n\nPLACEHOLDER implementation. PA '(Pedidos em PDF) - Sharepoint→Dataverse dataflow' refreshes a Power Automate Dataflow (id ef45bbfa-f86a-4b94-9fd8-46f6c3c22ea9) that maps SharePoint list 'Novos Pedidos' in /sites/vendas to Dataverse cr22f_uniumpedidoempdfs via Power Query M scripts. This endpoint is the core sync subflow and is HTTP-callable by /sync-manual and /on-upload. When the M-script mapping is migrated to Node-RED + Graph API, this flow should: (1) receive a single SP list item payload (fields + id + url); (2) lookup existence in public.pedidos_pdf by nome_do_arquivo+link_do_arquivo; (3) POST (create) or PATCH (update) accordingly; (4) return {ok:true, action, pedidoPdfId}. Requires Graph API app credentials (not yet provisioned on orcamentos container).\n"
     },
     {
         "id": "orc-pedpdf-sync-in",
@@ -1414,7 +1414,7 @@
         "type": "function",
         "z": "orc-tab-pedpdf-sync",
         "name": "Execute",
-        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst spItem = msg.spItem || {};\nconst nomeDoArquivo = (spItem.nome_do_arquivo || spItem.fileName || spItem.FileLeafRef || null);\ntry {\n    // PLACEHOLDER: PA '(Pedidos em PDF) - Sharepoint\u2192Dataverse dataflow' refreshes a Power Automate\n    // Dataflow (id ef45bbfa-f86a-4b94-9fd8-46f6c3c22ea9) that maps SharePoint list \"Novos Pedidos\"\n    // in site /sites/vendas to Dataverse cr22f_uniumpedidoempdfs via Power Query M scripts.\n    // Migration of the Dataflow's M-script mapping to Node-RED + Graph API calls is deferred to a\n    // later phase (Graph API app credentials not yet configured on the orcamentos container).\n    // This flow currently logs the event and returns a no-op acknowledgment.\n    // When activating: query SP list via Graph (GET /sites/{siteId}/lists/{listId}/items?$expand=fields)\n    // and upsert into public.pedidos_pdf by nome_do_arquivo (+ link_do_arquivo as disambiguation key).\n    let existingCount = null;\n    if (nomeDoArquivo) {\n        const lookup = await pgReq('GET', `/rest/v1/pedidos_pdf?nome_do_arquivo=eq.${encodeURIComponent(nomeDoArquivo)}&select=id&limit=1`, null);\n        if (lookup.statusCode === 200 && Array.isArray(lookup.body)) {\n            existingCount = lookup.body.length;\n        }\n    }\n    node.log(`[sync-pedidos-pdf] Event: nome_do_arquivo='${nomeDoArquivo || '?'}' existingInSupabase=${existingCount === null ? 'not-checked' : existingCount}`);\n    msg.statusCode = 200;\n    msg.payload = { ok: true, synced: false, reason: 'sharepoint-mapping-not-implemented-dev-placeholder', nomeDoArquivo: nomeDoArquivo, existingInSupabase: existingCount, logged: true };\n    return msg;\n} catch (err) {\n    node.error('[sync-pedidos-pdf] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst spItem = msg.spItem || {};\nconst nomeDoArquivo = (spItem.nome_do_arquivo || spItem.fileName || spItem.FileLeafRef || null);\ntry {\n    // PLACEHOLDER: PA '(Pedidos em PDF) - Sharepoint→Dataverse dataflow' refreshes a Power Automate\n    // Dataflow (id ef45bbfa-f86a-4b94-9fd8-46f6c3c22ea9) that maps SharePoint list \"Novos Pedidos\"\n    // in site /sites/vendas to Dataverse cr22f_uniumpedidoempdfs via Power Query M scripts.\n    // Migration of the Dataflow's M-script mapping to Node-RED + Graph API calls is deferred to a\n    // later phase (Graph API app credentials not yet configured on the orcamentos container).\n    // This flow currently logs the event and returns a no-op acknowledgment.\n    // When activating: query SP list via Graph (GET /sites/{siteId}/lists/{listId}/items?$expand=fields)\n    // and upsert into public.pedidos_pdf by nome_do_arquivo (+ link_do_arquivo as disambiguation key).\n    let existingCount = null;\n    if (nomeDoArquivo) {\n        const lookup = await pgReq('GET', `/rest/v1/pedidos_pdf?nome_do_arquivo=eq.${encodeURIComponent(nomeDoArquivo)}&select=id&limit=1`, null);\n        if (lookup.statusCode === 200 && Array.isArray(lookup.body)) {\n            existingCount = lookup.body.length;\n        }\n    }\n    node.log(`[sync-pedidos-pdf] Event: nome_do_arquivo='${nomeDoArquivo || '?'}' existingInSupabase=${existingCount === null ? 'not-checked' : existingCount}`);\n    msg.statusCode = 200;\n    msg.payload = { ok: true, synced: false, reason: 'sharepoint-mapping-not-implemented-dev-placeholder', nomeDoArquivo: nomeDoArquivo, existingInSupabase: existingCount, logged: true };\n    return msg;\n} catch (err) {\n    node.error('[sync-pedidos-pdf] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
         "outputs": 1,
         "timeout": 60,
         "noerr": 0,
@@ -1495,7 +1495,7 @@
         "type": "tab",
         "label": "Pedidos PDF - Sync Manual",
         "disabled": false,
-        "info": "POST /orcamentos/pedidos-pdf/sync-manual\n\nBody: {token?} \u2014 token optional; ignored in placeholder mode.\n\nPLACEHOLDER implementation. PA '(Pedidos em PDF) - Atualizar manualmente Pedidos em PDF Sharepoint -> Dataverse dataflow' is a manual/PowerApp-triggered wrapper around the same Dataflow (ef45bbfa-...). When migrated, this endpoint should: enumerate ALL items in SP list 'Novos Pedidos' via Graph API (GET /sites/{siteId}/lists/{listId}/items?$expand=fields, paginated via @odata.nextLink), and upsert each into public.pedidos_pdf. Returns {ok:true, synced, created, updated}. Currently returns placeholder ack and logs invocation.\n"
+        "info": "POST /orcamentos/pedidos-pdf/sync-manual\n\nBody: {token?} — token optional; ignored in placeholder mode.\n\nPLACEHOLDER implementation. PA '(Pedidos em PDF) - Atualizar manualmente Pedidos em PDF Sharepoint -> Dataverse dataflow' is a manual/PowerApp-triggered wrapper around the same Dataflow (ef45bbfa-...). When migrated, this endpoint should: enumerate ALL items in SP list 'Novos Pedidos' via Graph API (GET /sites/{siteId}/lists/{listId}/items?$expand=fields, paginated via @odata.nextLink), and upsert each into public.pedidos_pdf. Returns {ok:true, synced, created, updated}. Currently returns placeholder ack and logs invocation.\n"
     },
     {
         "id": "orc-pedpdf-manual-in",
@@ -1519,7 +1519,7 @@
         "type": "function",
         "z": "orc-tab-pedpdf-manual",
         "name": "Validate Input",
-        "func": "const body = msg.payload || {};\n// Manual trigger accepts optional {token} \u2014 not required, not validated here.\nmsg.requestBody = body;\nreturn [msg, null];",
+        "func": "const body = msg.payload || {};\n// Manual trigger accepts optional {token} — not required, not validated here.\nmsg.requestBody = body;\nreturn [msg, null];",
         "outputs": 2,
         "timeout": 0,
         "noerr": 0,
@@ -1565,7 +1565,7 @@
         "type": "function",
         "z": "orc-tab-pedpdf-manual",
         "name": "Execute",
-        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\ntry {\n    // PLACEHOLDER: PA '(Pedidos em PDF) - Atualizar manualmente Pedidos em PDF Sharepoint -> Dataverse dataflow'\n    // manually triggers a refresh of the same PA Dataflow (id ef45bbfa-f86a-4b94-9fd8-46f6c3c22ea9)\n    // orchestrated by sync-pedidos-pdf. When SharePoint\u2192Supabase mapping is implemented (Graph API),\n    // this endpoint should enumerate all items in SP list \"Novos Pedidos\" and upsert each into\n    // public.pedidos_pdf. For now it reports the target table's current row count as diagnostic.\n    let totalInSupabase = null;\n    const count = await pgReq('HEAD', `/rest/v1/pedidos_pdf?select=id`, null, { 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' });\n    if (count.statusCode >= 200 && count.statusCode < 300) {\n        totalInSupabase = 'see-content-range-header';\n    }\n    // Alternative: use ?select=id with limit=0 and inspect Content-Range \u2014 simplified here\n    const list = await pgReq('GET', `/rest/v1/pedidos_pdf?select=id&limit=1`, null, { 'Prefer': 'count=exact' });\n    node.log(`[sync-pedidos-pdf-manual] Manual refresh invoked. Supabase pedidos_pdf lookup-status=${list.statusCode}`);\n    msg.statusCode = 200;\n    msg.payload = { ok: true, synced: false, created: 0, updated: 0, reason: 'sharepoint-mapping-not-implemented-dev-placeholder', logged: true };\n    return msg;\n} catch (err) {\n    node.error('[sync-pedidos-pdf-manual] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
+        "func": "const SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server misconfigured' };\n    return msg;\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttps = parsedSb.protocol === 'https:';\nconst httpMod = isHttps ? nodeHttps : nodeHttp;\nconst port = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttps ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpMod.request({ method, hostname: parsedSb.hostname, port, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\ntry {\n    // PLACEHOLDER: PA '(Pedidos em PDF) - Atualizar manualmente Pedidos em PDF Sharepoint -> Dataverse dataflow'\n    // manually triggers a refresh of the same PA Dataflow (id ef45bbfa-f86a-4b94-9fd8-46f6c3c22ea9)\n    // orchestrated by sync-pedidos-pdf. When SharePoint→Supabase mapping is implemented (Graph API),\n    // this endpoint should enumerate all items in SP list \"Novos Pedidos\" and upsert each into\n    // public.pedidos_pdf. For now it reports the target table's current row count as diagnostic.\n    let totalInSupabase = null;\n    const count = await pgReq('HEAD', `/rest/v1/pedidos_pdf?select=id`, null, { 'Prefer': 'count=exact', 'Range-Unit': 'items', 'Range': '0-0' });\n    if (count.statusCode >= 200 && count.statusCode < 300) {\n        totalInSupabase = 'see-content-range-header';\n    }\n    // Alternative: use ?select=id with limit=0 and inspect Content-Range — simplified here\n    const list = await pgReq('GET', `/rest/v1/pedidos_pdf?select=id&limit=1`, null, { 'Prefer': 'count=exact' });\n    node.log(`[sync-pedidos-pdf-manual] Manual refresh invoked. Supabase pedidos_pdf lookup-status=${list.statusCode}`);\n    msg.statusCode = 200;\n    msg.payload = { ok: true, synced: false, created: 0, updated: 0, reason: 'sharepoint-mapping-not-implemented-dev-placeholder', logged: true };\n    return msg;\n} catch (err) {\n    node.error('[sync-pedidos-pdf-manual] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}",
         "outputs": 1,
         "timeout": 60,
         "noerr": 0,
@@ -1779,7 +1779,6 @@
             ]
         ]
     },
-
     {
         "id": "orc-tab-pdf-upload-temp",
         "type": "tab",
@@ -1798,7 +1797,11 @@
         "swaggerDoc": "",
         "x": 200,
         "y": 80,
-        "wires": [["orc-pdf-up-validate"]]
+        "wires": [
+            [
+                "orc-pdf-up-validate"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-up-validate",
@@ -1814,7 +1817,14 @@
         "libs": [],
         "x": 420,
         "y": 80,
-        "wires": [["orc-pdf-up-guard"], ["orc-pdf-up-out"]]
+        "wires": [
+            [
+                "orc-pdf-up-guard"
+            ],
+            [
+                "orc-pdf-up-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-up-guard",
@@ -1830,7 +1840,14 @@
         "libs": [],
         "x": 640,
         "y": 80,
-        "wires": [["orc-pdf-up-exec"], ["orc-pdf-up-out"]]
+        "wires": [
+            [
+                "orc-pdf-up-exec"
+            ],
+            [
+                "orc-pdf-up-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-up-exec",
@@ -1844,14 +1861,33 @@
         "initialize": "",
         "finalize": "",
         "libs": [
-            {"var": "nodeHttp", "module": "http"},
-            {"var": "nodeHttps", "module": "https"},
-            {"var": "nodeUrl", "module": "url"},
-            {"var": "nodeCrypto", "module": "crypto"}
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            },
+            {
+                "var": "nodeCrypto",
+                "module": "crypto"
+            }
         ],
         "x": 900,
         "y": 80,
-        "wires": [["orc-pdf-up-out"], ["orc-pdf-up-out"]]
+        "wires": [
+            [
+                "orc-pdf-up-out"
+            ],
+            [
+                "orc-pdf-up-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-up-out",
@@ -1859,7 +1895,9 @@
         "z": "orc-tab-pdf-upload-temp",
         "name": "Response",
         "statusCode": "",
-        "headers": {"Content-Type": "application/json"},
+        "headers": {
+            "Content-Type": "application/json"
+        },
         "x": 1200,
         "y": 80,
         "wires": []
@@ -1873,7 +1911,11 @@
         "uncaught": false,
         "x": 160,
         "y": 200,
-        "wires": [["orc-pdf-up-err"]]
+        "wires": [
+            [
+                "orc-pdf-up-err"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-up-err",
@@ -1889,9 +1931,12 @@
         "libs": [],
         "x": 360,
         "y": 200,
-        "wires": [["orc-pdf-up-out"]]
+        "wires": [
+            [
+                "orc-pdf-up-out"
+            ]
+        ]
     },
-
     {
         "id": "orc-tab-pdf-plotar-orc",
         "type": "tab",
@@ -1910,7 +1955,11 @@
         "swaggerDoc": "",
         "x": 200,
         "y": 80,
-        "wires": [["orc-pdf-plot-orc-validate"]]
+        "wires": [
+            [
+                "orc-pdf-plot-orc-validate"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-plot-orc-validate",
@@ -1926,7 +1975,14 @@
         "libs": [],
         "x": 420,
         "y": 80,
-        "wires": [["orc-pdf-plot-orc-guard"], ["orc-pdf-plot-orc-out"]]
+        "wires": [
+            [
+                "orc-pdf-plot-orc-guard"
+            ],
+            [
+                "orc-pdf-plot-orc-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-plot-orc-guard",
@@ -1942,7 +1998,14 @@
         "libs": [],
         "x": 640,
         "y": 80,
-        "wires": [["orc-pdf-plot-orc-exec"], ["orc-pdf-plot-orc-out"]]
+        "wires": [
+            [
+                "orc-pdf-plot-orc-exec"
+            ],
+            [
+                "orc-pdf-plot-orc-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-plot-orc-exec",
@@ -1956,13 +2019,26 @@
         "initialize": "",
         "finalize": "",
         "libs": [
-            {"var": "nodeHttp", "module": "http"},
-            {"var": "nodeHttps", "module": "https"},
-            {"var": "nodeUrl", "module": "url"}
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
         ],
         "x": 880,
         "y": 80,
-        "wires": [["orc-pdf-plot-orc-out"]]
+        "wires": [
+            [
+                "orc-pdf-plot-orc-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-plot-orc-out",
@@ -1970,7 +2046,9 @@
         "z": "orc-tab-pdf-plotar-orc",
         "name": "Response",
         "statusCode": "",
-        "headers": {"Content-Type": "application/json"},
+        "headers": {
+            "Content-Type": "application/json"
+        },
         "x": 1160,
         "y": 80,
         "wires": []
@@ -1984,7 +2062,11 @@
         "uncaught": false,
         "x": 160,
         "y": 200,
-        "wires": [["orc-pdf-plot-orc-err"]]
+        "wires": [
+            [
+                "orc-pdf-plot-orc-err"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-plot-orc-err",
@@ -2000,9 +2082,12 @@
         "libs": [],
         "x": 360,
         "y": 200,
-        "wires": [["orc-pdf-plot-orc-out"]]
+        "wires": [
+            [
+                "orc-pdf-plot-orc-out"
+            ]
+        ]
     },
-
     {
         "id": "orc-tab-pdf-plotar-guia",
         "type": "tab",
@@ -2021,7 +2106,11 @@
         "swaggerDoc": "",
         "x": 220,
         "y": 80,
-        "wires": [["orc-pdf-plot-guia-validate"]]
+        "wires": [
+            [
+                "orc-pdf-plot-guia-validate"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-plot-guia-validate",
@@ -2037,7 +2126,14 @@
         "libs": [],
         "x": 460,
         "y": 80,
-        "wires": [["orc-pdf-plot-guia-guard"], ["orc-pdf-plot-guia-out"]]
+        "wires": [
+            [
+                "orc-pdf-plot-guia-guard"
+            ],
+            [
+                "orc-pdf-plot-guia-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-plot-guia-guard",
@@ -2053,7 +2149,14 @@
         "libs": [],
         "x": 680,
         "y": 80,
-        "wires": [["orc-pdf-plot-guia-exec"], ["orc-pdf-plot-guia-out"]]
+        "wires": [
+            [
+                "orc-pdf-plot-guia-exec"
+            ],
+            [
+                "orc-pdf-plot-guia-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-plot-guia-exec",
@@ -2067,13 +2170,26 @@
         "initialize": "",
         "finalize": "",
         "libs": [
-            {"var": "nodeHttp", "module": "http"},
-            {"var": "nodeHttps", "module": "https"},
-            {"var": "nodeUrl", "module": "url"}
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
         ],
         "x": 920,
         "y": 80,
-        "wires": [["orc-pdf-plot-guia-out"]]
+        "wires": [
+            [
+                "orc-pdf-plot-guia-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-plot-guia-out",
@@ -2081,7 +2197,9 @@
         "z": "orc-tab-pdf-plotar-guia",
         "name": "Response",
         "statusCode": "",
-        "headers": {"Content-Type": "application/json"},
+        "headers": {
+            "Content-Type": "application/json"
+        },
         "x": 1200,
         "y": 80,
         "wires": []
@@ -2095,7 +2213,11 @@
         "uncaught": false,
         "x": 160,
         "y": 200,
-        "wires": [["orc-pdf-plot-guia-err"]]
+        "wires": [
+            [
+                "orc-pdf-plot-guia-err"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-plot-guia-err",
@@ -2111,9 +2233,12 @@
         "libs": [],
         "x": 360,
         "y": 200,
-        "wires": [["orc-pdf-plot-guia-out"]]
+        "wires": [
+            [
+                "orc-pdf-plot-guia-out"
+            ]
+        ]
     },
-
     {
         "id": "orc-tab-pdf-merge-temp",
         "type": "tab",
@@ -2132,7 +2257,11 @@
         "swaggerDoc": "",
         "x": 200,
         "y": 80,
-        "wires": [["orc-pdf-mtmp-validate"]]
+        "wires": [
+            [
+                "orc-pdf-mtmp-validate"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-mtmp-validate",
@@ -2148,7 +2277,14 @@
         "libs": [],
         "x": 420,
         "y": 80,
-        "wires": [["orc-pdf-mtmp-guard"], ["orc-pdf-mtmp-out"]]
+        "wires": [
+            [
+                "orc-pdf-mtmp-guard"
+            ],
+            [
+                "orc-pdf-mtmp-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-mtmp-guard",
@@ -2164,7 +2300,14 @@
         "libs": [],
         "x": 640,
         "y": 80,
-        "wires": [["orc-pdf-mtmp-exec"], ["orc-pdf-mtmp-out"]]
+        "wires": [
+            [
+                "orc-pdf-mtmp-exec"
+            ],
+            [
+                "orc-pdf-mtmp-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-mtmp-exec",
@@ -2180,7 +2323,11 @@
         "libs": [],
         "x": 880,
         "y": 80,
-        "wires": [["orc-pdf-mtmp-out"]]
+        "wires": [
+            [
+                "orc-pdf-mtmp-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-mtmp-out",
@@ -2188,7 +2335,9 @@
         "z": "orc-tab-pdf-merge-temp",
         "name": "Response",
         "statusCode": "",
-        "headers": {"Content-Type": "application/json"},
+        "headers": {
+            "Content-Type": "application/json"
+        },
         "x": 1120,
         "y": 80,
         "wires": []
@@ -2202,7 +2351,11 @@
         "uncaught": false,
         "x": 160,
         "y": 200,
-        "wires": [["orc-pdf-mtmp-err"]]
+        "wires": [
+            [
+                "orc-pdf-mtmp-err"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-mtmp-err",
@@ -2218,9 +2371,12 @@
         "libs": [],
         "x": 360,
         "y": 200,
-        "wires": [["orc-pdf-mtmp-out"]]
+        "wires": [
+            [
+                "orc-pdf-mtmp-out"
+            ]
+        ]
     },
-
     {
         "id": "orc-tab-pdf-merge-email",
         "type": "tab",
@@ -2239,7 +2395,11 @@
         "swaggerDoc": "",
         "x": 220,
         "y": 80,
-        "wires": [["orc-pdf-memail-validate"]]
+        "wires": [
+            [
+                "orc-pdf-memail-validate"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-memail-validate",
@@ -2255,7 +2415,14 @@
         "libs": [],
         "x": 460,
         "y": 80,
-        "wires": [["orc-pdf-memail-guard"], ["orc-pdf-memail-out"]]
+        "wires": [
+            [
+                "orc-pdf-memail-guard"
+            ],
+            [
+                "orc-pdf-memail-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-memail-guard",
@@ -2271,7 +2438,14 @@
         "libs": [],
         "x": 680,
         "y": 80,
-        "wires": [["orc-pdf-memail-exec"], ["orc-pdf-memail-out"]]
+        "wires": [
+            [
+                "orc-pdf-memail-exec"
+            ],
+            [
+                "orc-pdf-memail-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-memail-exec",
@@ -2287,7 +2461,11 @@
         "libs": [],
         "x": 920,
         "y": 80,
-        "wires": [["orc-pdf-memail-out"]]
+        "wires": [
+            [
+                "orc-pdf-memail-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-memail-out",
@@ -2295,7 +2473,9 @@
         "z": "orc-tab-pdf-merge-email",
         "name": "Response",
         "statusCode": "",
-        "headers": {"Content-Type": "application/json"},
+        "headers": {
+            "Content-Type": "application/json"
+        },
         "x": 1160,
         "y": 80,
         "wires": []
@@ -2309,7 +2489,11 @@
         "uncaught": false,
         "x": 160,
         "y": 200,
-        "wires": [["orc-pdf-memail-err"]]
+        "wires": [
+            [
+                "orc-pdf-memail-err"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-memail-err",
@@ -2325,9 +2509,12 @@
         "libs": [],
         "x": 360,
         "y": 200,
-        "wires": [["orc-pdf-memail-out"]]
+        "wires": [
+            [
+                "orc-pdf-memail-out"
+            ]
+        ]
     },
-
     {
         "id": "orc-tab-pdf-imprimir",
         "type": "tab",
@@ -2346,7 +2533,11 @@
         "swaggerDoc": "",
         "x": 200,
         "y": 80,
-        "wires": [["orc-pdf-impr-validate"]]
+        "wires": [
+            [
+                "orc-pdf-impr-validate"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-impr-validate",
@@ -2362,7 +2553,14 @@
         "libs": [],
         "x": 420,
         "y": 80,
-        "wires": [["orc-pdf-impr-guard"], ["orc-pdf-impr-out"]]
+        "wires": [
+            [
+                "orc-pdf-impr-guard"
+            ],
+            [
+                "orc-pdf-impr-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-impr-guard",
@@ -2378,7 +2576,14 @@
         "libs": [],
         "x": 640,
         "y": 80,
-        "wires": [["orc-pdf-impr-exec"], ["orc-pdf-impr-out"]]
+        "wires": [
+            [
+                "orc-pdf-impr-exec"
+            ],
+            [
+                "orc-pdf-impr-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-impr-exec",
@@ -2394,7 +2599,11 @@
         "libs": [],
         "x": 880,
         "y": 80,
-        "wires": [["orc-pdf-impr-out"]]
+        "wires": [
+            [
+                "orc-pdf-impr-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-impr-out",
@@ -2402,7 +2611,9 @@
         "z": "orc-tab-pdf-imprimir",
         "name": "Response",
         "statusCode": "",
-        "headers": {"Content-Type": "application/json"},
+        "headers": {
+            "Content-Type": "application/json"
+        },
         "x": 1120,
         "y": 80,
         "wires": []
@@ -2416,7 +2627,11 @@
         "uncaught": false,
         "x": 160,
         "y": 200,
-        "wires": [["orc-pdf-impr-err"]]
+        "wires": [
+            [
+                "orc-pdf-impr-err"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-impr-err",
@@ -2432,9 +2647,12 @@
         "libs": [],
         "x": 360,
         "y": 200,
-        "wires": [["orc-pdf-impr-out"]]
+        "wires": [
+            [
+                "orc-pdf-impr-out"
+            ]
+        ]
     },
-
     {
         "id": "orc-tab-pdf-cleanup",
         "type": "tab",
@@ -2457,7 +2675,11 @@
         "payloadType": "str",
         "x": 180,
         "y": 60,
-        "wires": [["orc-pdf-clean-validate"]]
+        "wires": [
+            [
+                "orc-pdf-clean-validate"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-clean-in",
@@ -2470,7 +2692,11 @@
         "swaggerDoc": "",
         "x": 200,
         "y": 140,
-        "wires": [["orc-pdf-clean-validate"]]
+        "wires": [
+            [
+                "orc-pdf-clean-validate"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-clean-validate",
@@ -2486,7 +2712,14 @@
         "libs": [],
         "x": 440,
         "y": 100,
-        "wires": [["orc-pdf-clean-guard"], ["orc-pdf-clean-out"]]
+        "wires": [
+            [
+                "orc-pdf-clean-guard"
+            ],
+            [
+                "orc-pdf-clean-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-clean-guard",
@@ -2502,7 +2735,14 @@
         "libs": [],
         "x": 660,
         "y": 100,
-        "wires": [["orc-pdf-clean-exec"], ["orc-pdf-clean-out"]]
+        "wires": [
+            [
+                "orc-pdf-clean-exec"
+            ],
+            [
+                "orc-pdf-clean-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-clean-exec",
@@ -2516,14 +2756,33 @@
         "initialize": "",
         "finalize": "",
         "libs": [
-            {"var": "nodeHttp", "module": "http"},
-            {"var": "nodeHttps", "module": "https"},
-            {"var": "nodeUrl", "module": "url"},
-            {"var": "nodeCrypto", "module": "crypto"}
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            },
+            {
+                "var": "nodeCrypto",
+                "module": "crypto"
+            }
         ],
         "x": 880,
         "y": 100,
-        "wires": [["orc-pdf-clean-out"], ["orc-pdf-clean-out"]]
+        "wires": [
+            [
+                "orc-pdf-clean-out"
+            ],
+            [
+                "orc-pdf-clean-out"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-clean-out",
@@ -2531,7 +2790,9 @@
         "z": "orc-tab-pdf-cleanup",
         "name": "Response",
         "statusCode": "",
-        "headers": {"Content-Type": "application/json"},
+        "headers": {
+            "Content-Type": "application/json"
+        },
         "x": 1160,
         "y": 100,
         "wires": []
@@ -2545,7 +2806,11 @@
         "uncaught": false,
         "x": 160,
         "y": 220,
-        "wires": [["orc-pdf-clean-err"]]
+        "wires": [
+            [
+                "orc-pdf-clean-err"
+            ]
+        ]
     },
     {
         "id": "orc-pdf-clean-err",
@@ -2561,6 +2826,633 @@
         "libs": [],
         "x": 360,
         "y": 220,
-        "wires": [["orc-pdf-clean-out"]]
+        "wires": [
+            [
+                "orc-pdf-clean-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-tab-cs-enviar-comp",
+        "type": "tab",
+        "label": "Clicksign - Enviar Comprovante",
+        "disabled": false,
+        "info": "POST /orcamentos/clicksign/enviar-comprovante\nInput: { orcamentoId, parcelaId (opt), pdfBase64, clienteNome, clienteEmail, clienteTelefone, vendedorEmail (opt watcher), signAuthType (opt), documentName (opt) }\nCalls clicksign-core-envelope subflow, then inserts comprovantes_de_pagamento row."
+    },
+    {
+        "id": "orc-tab-cs-core-env",
+        "type": "tab",
+        "label": "Clicksign - Core Envelope (subflow)",
+        "disabled": false,
+        "info": "Reusable Clicksign envelope creation. Called via `link call` from:\n  - clicksign-enviar-comprovante\n  - clicksign-enviar-recibo\n\nInput (msg.payload): { documentName, pdfBase64, signerName, signerEmail, signerPhone, signAuthType, watcherEmail? }\nOutput: { ok, envelopeId, documentId, signerId, csPlaceholder } or { ok:false, error }\n\nRequires env: CLICKSIGN_TOKEN (if missing, runs in placeholder mode)."
+    },
+    {
+        "id": "orc-tab-cs-webhook",
+        "type": "tab",
+        "label": "Clicksign - Webhook",
+        "disabled": false,
+        "info": "POST /orcamentos/clicksign/webhook\nReceives Clicksign callbacks. Events:\n  - 'sign': marks signer as signed (updates comprovantes_de_pagamento.assinado + data_da_assinatura, or impressoes_de_recibo.signed_on_datetime + situacao=538780001)\n  - 'document_closed': downloads signed PDF, uploads to MinIO, records s3_objects, updates comprovantes_de_pagamento.arquivo_s3_id\n\nReturns 200 quickly to ACK the webhook."
+    },
+    {
+        "id": "orc-tab-cs-enviar-rec",
+        "type": "tab",
+        "label": "Clicksign - Enviar Recibo",
+        "disabled": false,
+        "info": "POST /orcamentos/clicksign/enviar-recibo\nInput: { impressaoReciboId, pdfBase64, clienteNome, clienteEmail, clienteTelefone, signAuthType (opt), documentName (opt) }\nCalls clicksign-core-envelope subflow, then updates impressoes_de_recibo.clicksign_document_id + situacao=538780000."
+    },
+    {
+        "id": "orc-cs-core-in",
+        "type": "link in",
+        "z": "orc-tab-cs-core-env",
+        "name": "clicksign-core-internal",
+        "links": [],
+        "x": 140,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-core-validate"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-core-validate",
+        "type": "function",
+        "z": "orc-tab-cs-core-env",
+        "name": "Validate Input",
+        "func": "\nconst UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nfunction isUUID(v) { return typeof v === 'string' && UUID_RE.test(v); }\nconst EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nfunction isEmail(v) { return typeof v === 'string' && EMAIL_RE.test(v); }\n\nconst p = msg.payload || {};\nconst documentName = String(p.documentName || '').trim();\nlet pdfBase64 = String(p.pdfBase64 || '').trim();\nconst signerName = String(p.signerName || '').trim();\nconst signerEmail = String(p.signerEmail || '').trim();\nconst signerPhone = String(p.signerPhone || '').trim();\nconst signAuthType = String(p.signAuthType || 'whatsapp').trim().toLowerCase();\nconst watcherEmail = p.watcherEmail ? String(p.watcherEmail).trim() : null;\n\nif (!documentName || documentName.length > 300) {\n    msg.payload = { ok: false, error: 'documentName required (max 300 chars)' };\n    return msg;\n}\nif (!pdfBase64) {\n    msg.payload = { ok: false, error: 'pdfBase64 required' };\n    return msg;\n}\nif (pdfBase64.includes(',')) pdfBase64 = pdfBase64.split(',')[1];\nif (Buffer.byteLength(pdfBase64, 'base64') > 20 * 1024 * 1024) {\n    msg.payload = { ok: false, error: 'PDF exceeds 20 MB' };\n    return msg;\n}\nif (!signerName || signerName.length > 200) {\n    msg.payload = { ok: false, error: 'signerName required (max 200 chars)' };\n    return msg;\n}\nif (!isEmail(signerEmail)) {\n    msg.payload = { ok: false, error: 'signerEmail invalid' };\n    return msg;\n}\nif (!signerPhone || !/^[0-9+\\-\\s()]{8,20}$/.test(signerPhone)) {\n    msg.payload = { ok: false, error: 'signerPhone invalid' };\n    return msg;\n}\nconst VALID_AUTH = ['whatsapp', 'sms', 'email', 'liveness', 'selfie'];\nif (!VALID_AUTH.includes(signAuthType)) {\n    msg.payload = { ok: false, error: 'signAuthType must be one of: ' + VALID_AUTH.join(', ') };\n    return msg;\n}\nif (watcherEmail && !isEmail(watcherEmail)) {\n    msg.payload = { ok: false, error: 'watcherEmail invalid' };\n    return msg;\n}\n\n// Normalize phone (strip leading +55, strip non-digits)\nconst phoneClean = signerPhone.replace(/\\D/g, '').replace(/^55/, '');\n\n// Normalize signer name (strip accents/punctuation/digits — Clicksign requires plain name)\nfunction stripAccents(s) {\n    return s.normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');\n}\nconst signerNameClean = stripAccents(signerName)\n    .replace(/[0-9!?.,;:()\\-]/g, '')\n    .replace(/\\s+/g, ' ')\n    .trim();\n\nmsg._cs = {\n    documentName, pdfBase64,\n    signerName: signerNameClean || 'Cliente',\n    signerEmail, signerPhone: phoneClean, signAuthType, watcherEmail\n};\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 340,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-core-decision"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-core-decision",
+        "type": "switch",
+        "z": "orc-tab-cs-core-env",
+        "name": "Valid?",
+        "property": "payload.ok",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "false",
+                "vt": "bool"
+            },
+            {
+                "t": "else"
+            }
+        ],
+        "checkall": "false",
+        "repair": false,
+        "outputs": 2,
+        "x": 540,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-core-return"
+            ],
+            [
+                "orc-cs-core-exec"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-core-exec",
+        "type": "function",
+        "z": "orc-tab-cs-core-env",
+        "name": "Create Envelope (Clicksign API)",
+        "func": "\nconst CS_TOKEN = env.get('CLICKSIGN_TOKEN') || '';\nconst CS_BASE = 'https://app.clicksign.com';\nconst CS_PLACEHOLDER = !CS_TOKEN;\n\nfunction csReq(method, path, bodyObj) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = {\n            'Authorization': CS_TOKEN,\n            'Content-Type': 'application/vnd.api+json',\n            'Accept': 'application/vnd.api+json'\n        };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        const req = nodeHttps.request({\n            method, hostname: 'app.clicksign.com', port: 443,\n            path: path, headers\n        }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsed;\n                try { parsed = data ? JSON.parse(data) : null; } catch (e) { parsed = data; }\n                resolve({ statusCode: res.statusCode, body: parsed });\n            });\n        });\n        req.setTimeout(60000, () => { req.destroy(new Error('Clicksign request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst cs = msg._cs;\n\n// Placeholder mode: short-circuit with fake IDs\nif (CS_PLACEHOLDER) {\n    node.warn('[cs-core] CLICKSIGN_TOKEN missing \\u2014 returning placeholder envelope');\n    msg.payload = {\n        ok: true,\n        csPlaceholder: true,\n        envelopeId: 'placeholder-env-' + Date.now(),\n        documentId: 'placeholder-doc-' + Date.now(),\n        signerId: 'placeholder-signer-' + Date.now()\n    };\n    return msg;\n}\n\ntry {\n    // 1) Create envelope\n    const deadlineDate = new Date();\n    deadlineDate.setDate(deadlineDate.getDate() + 7);\n    const deadlineStr = deadlineDate.toISOString().slice(0, 10) + 'T18:00:00-03:00';\n    const envRes = await csReq('POST', '/api/v3/envelopes', {\n        data: {\n            type: 'envelopes',\n            attributes: {\n                name: cs.documentName,\n                locale: 'pt-BR',\n                auto_close: true,\n                remind_interval: 3,\n                block_after_refusal: true,\n                deadline_at: deadlineStr\n            }\n        }\n    });\n    if (envRes.statusCode < 200 || envRes.statusCode >= 300) {\n        node.error('[cs-core] CreateEnvelope failed HTTP ' + envRes.statusCode + ' \\u2014 ' + JSON.stringify(envRes.body));\n        msg.payload = { ok: false, error: 'Clicksign envelope creation failed' };\n        return msg;\n    }\n    const envelopeId = envRes.body && envRes.body.data && envRes.body.data.id;\n    if (!envelopeId) {\n        node.error('[cs-core] CreateEnvelope: no envelope id in response');\n        msg.payload = { ok: false, error: 'Clicksign envelope creation returned no id' };\n        return msg;\n    }\n\n    // 2) Add document\n    const docRes = await csReq('POST', '/api/v3/envelopes/' + encodeURIComponent(envelopeId) + '/documents', {\n        data: {\n            type: 'documents',\n            attributes: {\n                filename: cs.documentName + '.pdf',\n                content_base64: 'data:application/pdf;base64,' + cs.pdfBase64\n            }\n        }\n    });\n    if (docRes.statusCode < 200 || docRes.statusCode >= 300) {\n        node.error('[cs-core] AddDocument failed HTTP ' + docRes.statusCode + ' \\u2014 ' + JSON.stringify(docRes.body));\n        msg.payload = { ok: false, error: 'Clicksign add document failed' };\n        return msg;\n    }\n    const documentId = docRes.body && docRes.body.data && docRes.body.data.id;\n\n    // 3) Add signer\n    const signerRes = await csReq('POST', '/api/v3/envelopes/' + encodeURIComponent(envelopeId) + '/signers', {\n        data: {\n            type: 'signers',\n            attributes: {\n                name: cs.signerName,\n                email: cs.signerEmail,\n                phone_number: cs.signerPhone,\n                refusable: false,\n                group: '1',\n                communicate_events: {\n                    document_signed: 'email',\n                    signature_request: 'whatsapp',\n                    signature_reminder: 'email'\n                }\n            }\n        }\n    });\n    if (signerRes.statusCode < 200 || signerRes.statusCode >= 300) {\n        node.error('[cs-core] AddSigner failed HTTP ' + signerRes.statusCode + ' \\u2014 ' + JSON.stringify(signerRes.body));\n        msg.payload = { ok: false, error: 'Clicksign add signer failed' };\n        return msg;\n    }\n    const signerId = signerRes.body && signerRes.body.data && signerRes.body.data.id;\n\n    // 3a) Optional watcher\n    if (cs.watcherEmail) {\n        try {\n            await csReq('POST', '/api/v3/envelopes/' + encodeURIComponent(envelopeId) + '/signature_watchers', {\n                data: {\n                    type: 'signature_watchers',\n                    attributes: {\n                        communicate_events: { signature_watcher_document_signed: 'email' },\n                        attach_documents_enabled: true,\n                        email: cs.watcherEmail,\n                        kind: 'on_finished'\n                    }\n                }\n            });\n        } catch (we) {\n            node.warn('[cs-core] Watcher add failed (non-fatal): ' + we.message);\n        }\n    }\n\n    // 4) Add qualified-sign requirement\n    const qualRes = await csReq('POST', '/api/v3/envelopes/' + encodeURIComponent(envelopeId) + '/requirements', {\n        data: {\n            type: 'requirements',\n            attributes: { action: 'agree', role: 'receipt' },\n            relationships: {\n                document: { data: { type: 'documents', id: documentId } },\n                signer:   { data: { type: 'signers',   id: signerId   } }\n            }\n        }\n    });\n    if (qualRes.statusCode < 200 || qualRes.statusCode >= 300) {\n        node.error('[cs-core] AddQualiRequirement failed HTTP ' + qualRes.statusCode + ' \\u2014 ' + JSON.stringify(qualRes.body));\n        msg.payload = { ok: false, error: 'Clicksign add qualified requirement failed' };\n        return msg;\n    }\n\n    // 5) Add auth-evidence requirement (liveness + whatsapp OR the chosen type)\n    // Always add liveness as base\n    await csReq('POST', '/api/v3/envelopes/' + encodeURIComponent(envelopeId) + '/requirements', {\n        data: {\n            type: 'requirements',\n            attributes: { action: 'provide_evidence', auth: 'liveness' },\n            relationships: {\n                document: { data: { type: 'documents', id: documentId } },\n                signer:   { data: { type: 'signers',   id: signerId   } }\n            }\n        }\n    });\n    // Add chosen secondary auth\n    if (cs.signAuthType !== 'liveness') {\n        await csReq('POST', '/api/v3/envelopes/' + encodeURIComponent(envelopeId) + '/requirements', {\n            data: {\n                type: 'requirements',\n                attributes: { action: 'provide_evidence', auth: cs.signAuthType },\n                relationships: {\n                    document: { data: { type: 'documents', id: documentId } },\n                    signer:   { data: { type: 'signers',   id: signerId   } }\n                }\n            }\n        });\n    }\n\n    // 6) Activate (PATCH status=running)\n    const actRes = await csReq('PATCH', '/api/v3/envelopes/' + encodeURIComponent(envelopeId), {\n        data: {\n            id: envelopeId,\n            type: 'envelopes',\n            attributes: {\n                status: 'running',\n                name: cs.documentName,\n                locale: 'pt-BR',\n                auto_close: true,\n                remind_interval: 1\n            }\n        }\n    });\n    if (actRes.statusCode < 200 || actRes.statusCode >= 300) {\n        node.error('[cs-core] ActivateEnvelope failed HTTP ' + actRes.statusCode + ' \\u2014 ' + JSON.stringify(actRes.body));\n        msg.payload = { ok: false, error: 'Clicksign activate envelope failed' };\n        return msg;\n    }\n\n    // 7) Send notifications (best-effort)\n    try {\n        await csReq('POST', '/api/v3/envelopes/' + encodeURIComponent(envelopeId) + '/notifications', {\n            data: {\n                type: 'notifications',\n                attributes: { message: 'Documento disponivel para assinatura' }\n            }\n        });\n    } catch (ne) {\n        node.warn('[cs-core] Notification send failed (non-fatal): ' + ne.message);\n    }\n\n    node.log('[cs-core] SUCCESS env=' + envelopeId + ' doc=' + documentId + ' signer=' + signerId);\n    msg.payload = {\n        ok: true,\n        csPlaceholder: false,\n        envelopeId,\n        documentId,\n        signerId\n    };\n    return msg;\n} catch (e) {\n    node.error('[cs-core] Exception: ' + e.message);\n    msg.payload = { ok: false, error: 'Clicksign core execution error' };\n    return msg;\n}\n",
+        "outputs": 1,
+        "timeout": 180,
+        "noerr": 0,
+        "libs": [
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            }
+        ],
+        "x": 800,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-core-return"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-core-return",
+        "type": "link out",
+        "z": "orc-tab-cs-core-env",
+        "name": "core-return",
+        "mode": "return",
+        "links": [],
+        "x": 1080,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "orc-cs-core-catch",
+        "type": "catch",
+        "z": "orc-tab-cs-core-env",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 160,
+        "y": 220,
+        "wires": [
+            [
+                "orc-cs-core-err"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-core-err",
+        "type": "function",
+        "z": "orc-tab-cs-core-env",
+        "name": "Error Handler",
+        "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[cs-core] CATCH: ' + errMsg);\nmsg.payload = { ok: false, error: 'Clicksign core internal error' };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 380,
+        "y": 220,
+        "wires": [
+            [
+                "orc-cs-core-return"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-comp-in",
+        "type": "http in",
+        "z": "orc-tab-cs-enviar-comp",
+        "name": "POST /orcamentos/clicksign/enviar-comprovante",
+        "url": "/orcamentos/clicksign/enviar-comprovante",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 180,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-comp-validate"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-comp-validate",
+        "type": "function",
+        "z": "orc-tab-cs-enviar-comp",
+        "name": "Validate Input",
+        "func": "\nconst UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nfunction isUUID(v) { return typeof v === 'string' && UUID_RE.test(v); }\nconst EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nfunction isEmail(v) { return typeof v === 'string' && EMAIL_RE.test(v); }\n\nconst b = msg.payload || {};\nconst orcamentoId = String(b.orcamentoId || '').trim();\nconst parcelaId = b.parcelaId ? String(b.parcelaId).trim() : null;\nlet pdfBase64 = String(b.pdfBase64 || '').trim();\nconst clienteNome = String(b.clienteNome || '').trim();\nconst clienteEmail = String(b.clienteEmail || '').trim();\nconst clienteTelefone = String(b.clienteTelefone || '').trim();\nconst vendedorEmail = b.vendedorEmail ? String(b.vendedorEmail).trim() : null;\nconst signAuthType = b.signAuthType ? String(b.signAuthType).trim().toLowerCase() : 'whatsapp';\nconst documentName = b.documentName ? String(b.documentName).trim() : null;\n\nif (!isUUID(orcamentoId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'orcamentoId must be a UUID' };\n    return [null, msg];\n}\nif (parcelaId && !isUUID(parcelaId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'parcelaId must be a UUID if provided' };\n    return [null, msg];\n}\nif (!pdfBase64) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'pdfBase64 required' };\n    return [null, msg];\n}\nif (pdfBase64.includes(',')) pdfBase64 = pdfBase64.split(',')[1];\nif (!clienteNome) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'clienteNome required' };\n    return [null, msg];\n}\nif (!isEmail(clienteEmail)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'clienteEmail invalid' };\n    return [null, msg];\n}\nif (!clienteTelefone) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'clienteTelefone required' };\n    return [null, msg];\n}\nif (vendedorEmail && !isEmail(vendedorEmail)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'vendedorEmail invalid' };\n    return [null, msg];\n}\n\nmsg._input = { orcamentoId, parcelaId, pdfBase64, clienteNome, clienteEmail, clienteTelefone, vendedorEmail, signAuthType, documentName };\nreturn [msg, null];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 480,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-comp-guard"
+            ],
+            [
+                "orc-cs-comp-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-comp-guard",
+        "type": "function",
+        "z": "orc-tab-cs-enviar-comp",
+        "name": "Env Guard",
+        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 700,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-comp-prep"
+            ],
+            [
+                "orc-cs-comp-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-comp-prep",
+        "type": "function",
+        "z": "orc-tab-cs-enviar-comp",
+        "name": "Prep Core Payload",
+        "func": "\nconst i = msg._input;\nconst ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);\nconst docName = i.documentName || ('comprovante-' + ts);\nmsg.payload = {\n    documentName: docName,\n    pdfBase64: i.pdfBase64,\n    signerName: i.clienteNome,\n    signerEmail: i.clienteEmail,\n    signerPhone: i.clienteTelefone,\n    signAuthType: i.signAuthType,\n    watcherEmail: i.vendedorEmail\n};\nmsg._documentNameFinal = docName;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 920,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-comp-callcore"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-comp-callcore",
+        "type": "link call",
+        "z": "orc-tab-cs-enviar-comp",
+        "name": "Call Core Envelope",
+        "links": [
+            "orc-cs-core-in"
+        ],
+        "linkType": "static",
+        "timeout": "180",
+        "x": 1160,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-comp-persist"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-comp-persist",
+        "type": "function",
+        "z": "orc-tab-cs-enviar-comp",
+        "name": "Insert comprovante",
+        "func": "\nconst SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    node.error('[clicksign] Missing Supabase env vars');\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server configuration error' };\n    return [null, msg];\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttpsSb = parsedSb.protocol === 'https:';\nconst httpModSb = isHttpsSb ? nodeHttps : nodeHttp;\nconst portSb = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttpsSb ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpModSb.request({ method, hostname: parsedSb.hostname, port: portSb, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst csResult = msg.payload || {};\nif (!csResult.ok) {\n    msg.statusCode = 502;\n    msg.payload = { ok: false, error: csResult.error || 'Clicksign core failed' };\n    return [null, msg];\n}\n\nconst i = msg._input;\nconst documentId = csResult.documentId;\nconst envelopeId = csResult.envelopeId;\nconst placeholder = !!csResult.csPlaceholder;\n\ntry {\n    const row = {\n        orcamento_id: i.orcamentoId,\n        parcela_id: i.parcelaId || null,\n        id_clicksign: documentId,\n        email_para_envio: i.clienteEmail,\n        telefone_para_envio: i.clienteTelefone,\n        assinado: false,\n        data_do_pagamento: new Date().toISOString()\n    };\n    const insertRes = await pgReq('POST', '/rest/v1/comprovantes_de_pagamento', row, { 'Prefer': 'return=representation' });\n    if (insertRes.statusCode < 200 || insertRes.statusCode >= 300 || !Array.isArray(insertRes.body) || insertRes.body.length === 0) {\n        node.error('[cs-enviar-comp] Supabase insert failed HTTP ' + insertRes.statusCode + ' \\u2014 ' + JSON.stringify(insertRes.body));\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: 'Failed to persist comprovante' };\n        return [null, msg];\n    }\n    const comprovanteId = insertRes.body[0].id;\n    node.log('[cs-enviar-comp] SUCCESS orc=' + i.orcamentoId + ' comp=' + comprovanteId + ' doc=' + documentId + ' placeholder=' + placeholder);\n    msg.statusCode = 200;\n    msg.payload = {\n        ok: true,\n        comprovanteId,\n        envelopeId,\n        documentId,\n        csPlaceholder: placeholder\n    };\n    return [msg, null];\n} catch (e) {\n    node.error('[cs-enviar-comp] Exception: ' + e.message);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return [null, msg];\n}\n",
+        "outputs": 2,
+        "timeout": 60,
+        "noerr": 0,
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
+        ],
+        "x": 1400,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-comp-out"
+            ],
+            [
+                "orc-cs-comp-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-comp-out",
+        "type": "http response",
+        "z": "orc-tab-cs-enviar-comp",
+        "name": "Response",
+        "statusCode": "",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "x": 1640,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "orc-cs-comp-catch",
+        "type": "catch",
+        "z": "orc-tab-cs-enviar-comp",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 160,
+        "y": 220,
+        "wires": [
+            [
+                "orc-cs-comp-err"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-comp-err",
+        "type": "function",
+        "z": "orc-tab-cs-enviar-comp",
+        "name": "Error Handler",
+        "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[cs-enviar-comp] CATCH: ' + errMsg);\nmsg.statusCode = msg.statusCode || 500;\nmsg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nmsg.payload = { ok: false, error: 'Internal error' };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 380,
+        "y": 220,
+        "wires": [
+            [
+                "orc-cs-comp-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-wh-in",
+        "type": "http in",
+        "z": "orc-tab-cs-webhook",
+        "name": "POST /orcamentos/clicksign/webhook",
+        "url": "/orcamentos/clicksign/webhook",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 160,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-wh-ack"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-wh-ack",
+        "type": "function",
+        "z": "orc-tab-cs-webhook",
+        "name": "ACK 200 + Fanout",
+        "func": "\n// ACK immediately by queueing the response; continue processing in next branch\nconst resp = { statusCode: 200, headers: { 'Content-Type': 'application/json' }, payload: { ok: true } };\n// Clone payload for processor; res/req must stay to allow http response downstream\nconst processor = { payload: msg.payload };\n// Send ACK first via first output; processor on second output\nnode.send([Object.assign({}, msg, resp), processor]);\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-wh-out"
+            ],
+            [
+                "orc-cs-wh-proc"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-wh-out",
+        "type": "http response",
+        "z": "orc-tab-cs-webhook",
+        "name": "Response",
+        "statusCode": "200",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "x": 660,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "orc-cs-wh-proc",
+        "type": "function",
+        "z": "orc-tab-cs-webhook",
+        "name": "Process Webhook Event",
+        "func": "\nconst SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    node.error('[clicksign] Missing Supabase env vars');\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server configuration error' };\n    return [null, msg];\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttpsSb = parsedSb.protocol === 'https:';\nconst httpModSb = isHttpsSb ? nodeHttps : nodeHttp;\nconst portSb = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttpsSb ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpModSb.request({ method, hostname: parsedSb.hostname, port: portSb, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst CS_TOKEN = env.get('CLICKSIGN_TOKEN') || '';\nconst CS_BASE = 'https://app.clicksign.com';\nconst CS_PLACEHOLDER = !CS_TOKEN;\n\nfunction csReq(method, path, bodyObj) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = {\n            'Authorization': CS_TOKEN,\n            'Content-Type': 'application/vnd.api+json',\n            'Accept': 'application/vnd.api+json'\n        };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        const req = nodeHttps.request({\n            method, hostname: 'app.clicksign.com', port: 443,\n            path: path, headers\n        }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsed;\n                try { parsed = data ? JSON.parse(data) : null; } catch (e) { parsed = data; }\n                resolve({ statusCode: res.statusCode, body: parsed });\n            });\n        });\n        req.setTimeout(60000, () => { req.destroy(new Error('Clicksign request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst body = msg.payload || {};\nconst eventName = body.event && body.event.name;\nconst docInfo = body.document || {};\nconst documentId = docInfo.key || docInfo.id || null;\nconst envelopeInfo = body.envelope || {};\n\nif (!eventName || !documentId) {\n    node.warn('[cs-wh] Ignoring webhook: missing event.name or document.key');\n    return null;\n}\n\nnode.log('[cs-wh] Received event=' + eventName + ' doc=' + documentId);\n\n// Helper: update comprovantes_de_pagamento by id_clicksign\nasync function updateComprovantes(filter, patch) {\n    return pgReq('PATCH', '/rest/v1/comprovantes_de_pagamento?' + filter, patch, { 'Prefer': 'return=representation' });\n}\nasync function updateRecibos(filter, patch) {\n    return pgReq('PATCH', '/rest/v1/impressoes_de_recibo?' + filter, patch, { 'Prefer': 'return=representation' });\n}\n\ntry {\n    if (eventName === 'sign') {\n        // Mark signed. Try both tables — whichever has the document id matching wins.\n        const sigDatetime = new Date().toISOString();\n\n        // Find signer email for user lookup (used as assinante_id on comprovantes)\n        let signerEmail = null;\n        if (docInfo.signers && Array.isArray(docInfo.signers) && docInfo.signers.length > 0) {\n            signerEmail = docInfo.signers[0].email || null;\n        }\n        let assinanteId = null;\n        if (signerEmail) {\n            try {\n                const userRes = await pgReq('GET', '/rest/v1/profiles?email=eq.' + encodeURIComponent(signerEmail) + '&select=id&limit=1', null);\n                if (userRes.statusCode === 200 && Array.isArray(userRes.body) && userRes.body.length > 0) {\n                    assinanteId = userRes.body[0].id;\n                }\n            } catch (ue) {\n                node.warn('[cs-wh] profile lookup failed (non-fatal): ' + ue.message);\n            }\n        }\n\n        // Update comprovantes\n        const compPatch = { assinado: true, data_da_assinatura: sigDatetime };\n        if (assinanteId) compPatch.assinante_id = assinanteId;\n        const compRes = await updateComprovantes('id_clicksign=eq.' + encodeURIComponent(documentId), compPatch);\n        const compUpdated = Array.isArray(compRes.body) ? compRes.body.length : 0;\n\n        // Update recibos (538780001 = signed status code per PA)\n        const recPatch = { signed_on_datetime: sigDatetime, situacao: 538780001 };\n        const recRes = await updateRecibos('clicksign_document_id=eq.' + encodeURIComponent(documentId), recPatch);\n        const recUpdated = Array.isArray(recRes.body) ? recRes.body.length : 0;\n\n        node.log('[cs-wh] sign: comp_updated=' + compUpdated + ' rec_updated=' + recUpdated + ' doc=' + documentId);\n        return null;\n    }\n\n    if (eventName === 'document_closed' || eventName === 'close' || eventName === 'auto_close') {\n        // Download signed PDF → upload MinIO → update arquivo_s3_id/link\n        const signedFileUrl = docInfo.downloads && docInfo.downloads.signed_file_url;\n        const fileName = docInfo.filename || ('signed-' + documentId + '.pdf');\n        if (!signedFileUrl) {\n            node.warn('[cs-wh] document_closed without signed_file_url; skipping MinIO upload');\n            return null;\n        }\n\n        // Download PDF\n        const urlParsed = nodeUrl.parse(signedFileUrl);\n        const downloadMod = urlParsed.protocol === 'https:' ? nodeHttps : nodeHttp;\n        const pdfBuf = await new Promise((resolve, reject) => {\n            const req = downloadMod.get(signedFileUrl, (res) => {\n                if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {\n                    // Follow one redirect\n                    downloadMod.get(res.headers.location, (res2) => {\n                        const chunks = [];\n                        res2.on('data', c => chunks.push(c));\n                        res2.on('end', () => resolve(Buffer.concat(chunks)));\n                        res2.on('error', reject);\n                    }).on('error', reject);\n                    return;\n                }\n                const chunks = [];\n                res.on('data', c => chunks.push(c));\n                res.on('end', () => resolve(Buffer.concat(chunks)));\n                res.on('error', reject);\n            });\n            req.on('error', reject);\n            req.setTimeout(60000, () => req.destroy(new Error('PDF download timeout')));\n        });\n\n        // Upload to MinIO (AWS SigV4)\n        const MINIO_ENDPOINT = env.get('MINIO_ENDPOINT') || 'https://storage.unium.me';\n        const ACCESS_KEY = env.get('MINIO_ACCESS_KEY') || '';\n        const SECRET_KEY = env.get('MINIO_SECRET_KEY') || '';\n        const CF_ID = env.get('CF_ACCESS_CLIENT_ID') || '';\n        const CF_SEC = env.get('CF_ACCESS_CLIENT_SECRET') || '';\n        const REGION = 'us-east-1';\n        const bucket = 'pedidos';\n        const safeKey = 'signed-' + documentId + '_' + fileName.replace(/[\\/\\\\*?\":<>|\\x00-\\x1f]/g, '_');\n        const objectKey = encodeURIComponent(safeKey).replace(/%20/g, '+');\n\n        if (!ACCESS_KEY || !SECRET_KEY) {\n            node.warn('[cs-wh] MinIO creds missing; skipping upload for doc=' + documentId);\n            return null;\n        }\n\n        const endpointUrl = MINIO_ENDPOINT.replace(/\\/$/, '');\n        const parsedMinio = nodeUrl.parse(endpointUrl);\n        function hmac(k, d, e) { return nodeCrypto.createHmac('sha256', k).update(d).digest(e || undefined); }\n        function hashStr(d) { return nodeCrypto.createHash('sha256').update(d).digest('hex'); }\n        const now = new Date();\n        const amzDate = now.toISOString().replace(/[:-]/g, '').replace(/\\.\\d+/, '');\n        const dateStamp = amzDate.slice(0, 8);\n        const payloadHash = hashStr(pdfBuf);\n        const canonicalUri = '/' + bucket + '/' + objectKey;\n        const canonicalHeaders = [\n            'content-type:application/pdf',\n            'host:' + parsedMinio.host,\n            'x-amz-content-sha256:' + payloadHash,\n            'x-amz-date:' + amzDate\n        ].join('\\n') + '\\n';\n        const signedHeaders = 'content-type;host;x-amz-content-sha256;x-amz-date';\n        const canonicalReq = ['PUT', canonicalUri, '', canonicalHeaders, signedHeaders, payloadHash].join('\\n');\n        const credScope = dateStamp + '/' + REGION + '/s3/aws4_request';\n        const strToSign = ['AWS4-HMAC-SHA256', amzDate, credScope, hashStr(canonicalReq)].join('\\n');\n        const signKey = hmac(hmac(hmac(hmac('AWS4' + SECRET_KEY, dateStamp), REGION), 's3'), 'aws4_request');\n        const signature = hmac(signKey, strToSign, 'hex');\n        const authHeader = 'AWS4-HMAC-SHA256 Credential=' + ACCESS_KEY + '/' + credScope + ', SignedHeaders=' + signedHeaders + ', Signature=' + signature;\n\n        const putOk = await new Promise((resolve) => {\n            const req = nodeHttps.request({\n                method: 'PUT',\n                hostname: parsedMinio.hostname,\n                port: parsedMinio.port || 443,\n                path: canonicalUri,\n                headers: {\n                    'Authorization': authHeader,\n                    'Content-Type': 'application/pdf',\n                    'Content-Length': pdfBuf.length,\n                    'x-amz-date': amzDate,\n                    'x-amz-content-sha256': payloadHash,\n                    'cf-access-client-id': CF_ID,\n                    'cf-access-client-secret': CF_SEC\n                }\n            }, (res) => {\n                let d = ''; res.on('data', c => { d += c; });\n                res.on('end', () => resolve(res.statusCode === 200 || res.statusCode === 204));\n            });\n            req.on('error', (e) => { node.error('[cs-wh] MinIO PUT error: ' + e.message); resolve(false); });\n            req.write(pdfBuf); req.end();\n        });\n\n        if (!putOk) {\n            node.error('[cs-wh] MinIO upload failed for doc=' + documentId);\n            return null;\n        }\n\n        // Insert s3_objects\n        let s3ObjectsId = null;\n        try {\n            const sbInsRes = await pgReq('POST', '/rest/v1/s3_objects',\n                { bucket_name: bucket, object_key: safeKey },\n                { 'Prefer': 'return=representation' }\n            );\n            if (sbInsRes.statusCode >= 200 && sbInsRes.statusCode < 300 && Array.isArray(sbInsRes.body) && sbInsRes.body.length > 0) {\n                s3ObjectsId = sbInsRes.body[0].id;\n            }\n        } catch (se) {\n            node.warn('[cs-wh] s3_objects insert failed: ' + se.message);\n        }\n\n        const publicUrl = endpointUrl + '/' + bucket + '/' + objectKey;\n\n        // Update comprovantes_de_pagamento\n        const compPatch = { link_do_arquivo: publicUrl };\n        if (s3ObjectsId) compPatch.arquivo_s3_id = s3ObjectsId;\n        const compRes = await updateComprovantes('id_clicksign=eq.' + encodeURIComponent(documentId), compPatch);\n        const compUpdated = Array.isArray(compRes.body) ? compRes.body.length : 0;\n\n        // Update recibos (link_recibo + recibo_sharepoint_file_id replaced with public_url + s3_objects_id-ish mapping)\n        const recPatch = { link_recibo: publicUrl };\n        const recRes = await updateRecibos('clicksign_document_id=eq.' + encodeURIComponent(documentId), recPatch);\n        const recUpdated = Array.isArray(recRes.body) ? recRes.body.length : 0;\n\n        node.log('[cs-wh] document_closed: comp_updated=' + compUpdated + ' rec_updated=' + recUpdated + ' url=' + publicUrl);\n        return null;\n    }\n\n    node.log('[cs-wh] Unhandled event=' + eventName + ' doc=' + documentId + ' (ignored)');\n    return null;\n} catch (e) {\n    node.error('[cs-wh] Processor exception: ' + e.message);\n    return null;\n}\n",
+        "outputs": 1,
+        "timeout": 180,
+        "noerr": 0,
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            },
+            {
+                "var": "nodeCrypto",
+                "module": "crypto"
+            }
+        ],
+        "x": 680,
+        "y": 180,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "orc-cs-wh-catch",
+        "type": "catch",
+        "z": "orc-tab-cs-webhook",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 160,
+        "y": 300,
+        "wires": [
+            [
+                "orc-cs-wh-err"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-wh-err",
+        "type": "function",
+        "z": "orc-tab-cs-webhook",
+        "name": "Error Handler",
+        "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[cs-wh] CATCH: ' + errMsg);\n// Webhook always returns 200; catch just logs.\nreturn null;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 380,
+        "y": 300,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "orc-cs-rec-in",
+        "type": "http in",
+        "z": "orc-tab-cs-enviar-rec",
+        "name": "POST /orcamentos/clicksign/enviar-recibo",
+        "url": "/orcamentos/clicksign/enviar-recibo",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 180,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-rec-validate"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-rec-validate",
+        "type": "function",
+        "z": "orc-tab-cs-enviar-rec",
+        "name": "Validate Input",
+        "func": "\nconst UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nfunction isUUID(v) { return typeof v === 'string' && UUID_RE.test(v); }\nconst EMAIL_RE = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\nfunction isEmail(v) { return typeof v === 'string' && EMAIL_RE.test(v); }\n\nconst b = msg.payload || {};\nconst impressaoReciboId = String(b.impressaoReciboId || '').trim();\nlet pdfBase64 = String(b.pdfBase64 || '').trim();\nconst clienteNome = String(b.clienteNome || '').trim();\nconst clienteEmail = String(b.clienteEmail || '').trim();\nconst clienteTelefone = String(b.clienteTelefone || '').trim();\nconst signAuthType = b.signAuthType ? String(b.signAuthType).trim().toLowerCase() : 'whatsapp';\nconst documentName = b.documentName ? String(b.documentName).trim() : null;\n\nif (!isUUID(impressaoReciboId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'impressaoReciboId must be a UUID' };\n    return [null, msg];\n}\nif (!pdfBase64) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'pdfBase64 required' };\n    return [null, msg];\n}\nif (pdfBase64.includes(',')) pdfBase64 = pdfBase64.split(',')[1];\nif (!clienteNome) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'clienteNome required' };\n    return [null, msg];\n}\nif (!isEmail(clienteEmail)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'clienteEmail invalid' };\n    return [null, msg];\n}\nif (!clienteTelefone) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'clienteTelefone required' };\n    return [null, msg];\n}\n\nmsg._input = { impressaoReciboId, pdfBase64, clienteNome, clienteEmail, clienteTelefone, signAuthType, documentName };\nreturn [msg, null];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 480,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-rec-guard"
+            ],
+            [
+                "orc-cs-rec-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-rec-guard",
+        "type": "function",
+        "z": "orc-tab-cs-enviar-rec",
+        "name": "Env Guard",
+        "func": "const NR_ENV = env.get('NODE_RED_ENV') || 'prod';\nif (NR_ENV !== 'prod') {\n    msg.statusCode = 403;\n    msg.payload = { ok: false, error: 'Blocked: not in prod environment' };\n    return [null, msg];\n}\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 700,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-rec-prep"
+            ],
+            [
+                "orc-cs-rec-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-rec-prep",
+        "type": "function",
+        "z": "orc-tab-cs-enviar-rec",
+        "name": "Prep Core Payload",
+        "func": "\nconst i = msg._input;\nconst ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);\nconst docName = i.documentName || ('recibo-' + ts);\nmsg.payload = {\n    documentName: docName,\n    pdfBase64: i.pdfBase64,\n    signerName: i.clienteNome,\n    signerEmail: i.clienteEmail,\n    signerPhone: i.clienteTelefone,\n    signAuthType: i.signAuthType\n};\nmsg._documentNameFinal = docName;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 920,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-rec-callcore"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-rec-callcore",
+        "type": "link call",
+        "z": "orc-tab-cs-enviar-rec",
+        "name": "Call Core Envelope",
+        "links": [
+            "orc-cs-core-in"
+        ],
+        "linkType": "static",
+        "timeout": "180",
+        "x": 1160,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-rec-persist"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-rec-persist",
+        "type": "function",
+        "z": "orc-tab-cs-enviar-rec",
+        "name": "Update recibo",
+        "func": "\nconst SUPABASE_URL = env.get('SUPABASE_URL') || '';\nconst SUPABASE_KEY = env.get('SUPABASE_SERVICE_ROLE_KEY') || '';\nif (!SUPABASE_URL || !SUPABASE_KEY) {\n    node.error('[clicksign] Missing Supabase env vars');\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Server configuration error' };\n    return [null, msg];\n}\nconst parsedSb = nodeUrl.parse(SUPABASE_URL);\nconst isHttpsSb = parsedSb.protocol === 'https:';\nconst httpModSb = isHttpsSb ? nodeHttps : nodeHttp;\nconst portSb = parsedSb.port ? parseInt(parsedSb.port, 10) : (isHttpsSb ? 443 : 80);\n\nfunction pgReq(method, path, bodyObj, extraHeaders) {\n    return new Promise((resolve, reject) => {\n        const bodyStr = bodyObj ? JSON.stringify(bodyObj) : null;\n        const headers = { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Accept': 'application/json', 'Content-Type': 'application/json' };\n        if (bodyStr) headers['Content-Length'] = Buffer.byteLength(bodyStr);\n        if (extraHeaders) Object.assign(headers, extraHeaders);\n        const req = httpModSb.request({ method, hostname: parsedSb.hostname, port: portSb, path, headers }, (res) => {\n            let data = '';\n            res.on('data', c => { data += c; });\n            res.on('end', () => {\n                let parsedBody;\n                try { parsedBody = data ? JSON.parse(data) : null; } catch (e) { parsedBody = data; }\n                resolve({ statusCode: res.statusCode, body: parsedBody });\n            });\n        });\n        req.setTimeout(30000, () => { req.destroy(new Error('Supabase request timeout')); });\n        req.on('error', reject);\n        if (bodyStr) req.write(bodyStr);\n        req.end();\n    });\n}\n\nconst csResult = msg.payload || {};\nif (!csResult.ok) {\n    // Set situacao=538780003 (failed) per PA fallback\n    const failPatch = { situacao: 538780003 };\n    try {\n        await pgReq('PATCH', '/rest/v1/impressoes_de_recibo?id=eq.' + encodeURIComponent(msg._input.impressaoReciboId), failPatch, { 'Prefer': 'return=representation' });\n    } catch (fe) {\n        node.warn('[cs-enviar-rec] Failed to mark recibo as failed: ' + fe.message);\n    }\n    msg.statusCode = 502;\n    msg.payload = { ok: false, error: csResult.error || 'Clicksign core failed' };\n    return [null, msg];\n}\n\nconst i = msg._input;\nconst documentId = csResult.documentId;\nconst envelopeId = csResult.envelopeId;\nconst placeholder = !!csResult.csPlaceholder;\n\ntry {\n    const patch = {\n        clicksign_document_id: documentId,\n        situacao: 538780000,  // signing-pending status\n        telefone_para_envio: i.clienteTelefone,\n        nome_cliente: i.clienteNome\n    };\n    const patchRes = await pgReq('PATCH', '/rest/v1/impressoes_de_recibo?id=eq.' + encodeURIComponent(i.impressaoReciboId), patch, { 'Prefer': 'return=representation' });\n    if (patchRes.statusCode < 200 || patchRes.statusCode >= 300) {\n        node.error('[cs-enviar-rec] Supabase patch failed HTTP ' + patchRes.statusCode + ' \\u2014 ' + JSON.stringify(patchRes.body));\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: 'Failed to update recibo' };\n        return [null, msg];\n    }\n    if (!Array.isArray(patchRes.body) || patchRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: 'impressaoRecibo not found' };\n        return [null, msg];\n    }\n    node.log('[cs-enviar-rec] SUCCESS rec=' + i.impressaoReciboId + ' doc=' + documentId + ' placeholder=' + placeholder);\n    msg.statusCode = 200;\n    msg.payload = {\n        ok: true,\n        impressaoReciboId: i.impressaoReciboId,\n        documentId,\n        envelopeId,\n        csPlaceholder: placeholder\n    };\n    return [msg, null];\n} catch (e) {\n    node.error('[cs-enviar-rec] Exception: ' + e.message);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return [null, msg];\n}\n",
+        "outputs": 2,
+        "timeout": 60,
+        "noerr": 0,
+        "libs": [
+            {
+                "var": "nodeHttp",
+                "module": "http"
+            },
+            {
+                "var": "nodeHttps",
+                "module": "https"
+            },
+            {
+                "var": "nodeUrl",
+                "module": "url"
+            }
+        ],
+        "x": 1400,
+        "y": 80,
+        "wires": [
+            [
+                "orc-cs-rec-out"
+            ],
+            [
+                "orc-cs-rec-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-rec-out",
+        "type": "http response",
+        "z": "orc-tab-cs-enviar-rec",
+        "name": "Response",
+        "statusCode": "",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "x": 1640,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "orc-cs-rec-catch",
+        "type": "catch",
+        "z": "orc-tab-cs-enviar-rec",
+        "name": "Catch All",
+        "scope": null,
+        "uncaught": false,
+        "x": 160,
+        "y": 220,
+        "wires": [
+            [
+                "orc-cs-rec-err"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-rec-err",
+        "type": "function",
+        "z": "orc-tab-cs-enviar-rec",
+        "name": "Error Handler",
+        "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[cs-enviar-rec] CATCH: ' + errMsg);\nmsg.statusCode = msg.statusCode || 500;\nmsg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nmsg.payload = { ok: false, error: 'Internal error' };\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "libs": [],
+        "x": 380,
+        "y": 220,
+        "wires": [
+            [
+                "orc-cs-rec-out"
+            ]
+        ]
     }
 ]
