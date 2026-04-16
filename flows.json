@@ -2562,14 +2562,15 @@
             [
                 "orc-cs-wh-hmac"
             ]
-        ]
+        ],
+        "skipBodyParsing": true
     },
     {
         "id": "orc-cs-wh-hmac",
         "type": "function",
         "z": "orc-tab-cs-webhook",
         "name": "HMAC Validate (Content-Hmac)",
-        "func": "const crypto = global.get('crypto') || require('crypto');\nconst secret = env.get('CLICKSIGN_WEBHOOK_SECRET');\nif (!secret) {\n    node.error('[clicksign-hmac] CLICKSIGN_WEBHOOK_SECRET not configured');\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'webhook_secret_not_configured' };\n    return [null, msg];\n}\nconst rawBody = msg.req && msg.req.rawBody;\nif (!rawBody) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'raw_body_not_available' };\n    return [null, msg];\n}\nconst rawSig = (msg.req.headers['content-hmac'] || msg.req.headers['x-clicksign-signature'] || '');\nconst signature = String(rawSig).replace(/^sha256=/i, '').trim();\nif (!signature) {\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'missing_signature' };\n    return [null, msg];\n}\nconst expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');\nconst sigBuf = Buffer.from(signature, 'utf8');\nconst expBuf = Buffer.from(expected, 'utf8');\nif (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {\n    node.warn('[clicksign-hmac] invalid signature (sig_len=' + signature.length + ' exp_len=' + expected.length + ')');\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'invalid_signature' };\n    return [null, msg];\n}\nreturn [msg, null];\n",
+        "func": "const crypto = global.get('crypto') || require('crypto');\nconst secret = env.get('CLICKSIGN_WEBHOOK_SECRET');\nif (!secret) {\n    node.error('[clicksign-hmac] CLICKSIGN_WEBHOOK_SECRET not configured');\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'webhook_secret_not_configured' };\n    return [null, msg];\n}\n// With skipBodyParsing=true, msg.req.body is a raw Buffer\nconst rawBuf = msg.req && msg.req.body;\nif (!Buffer.isBuffer(rawBuf) || rawBuf.length === 0) {\n    node.error('[clicksign-hmac] raw body not available (expected Buffer from skipBodyParsing)');\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'raw_body_not_available' };\n    return [null, msg];\n}\nconst rawSig = (msg.req.headers['content-hmac'] || msg.req.headers['x-clicksign-signature'] || '');\nconst signature = String(rawSig).replace(/^sha256=/i, '').trim();\nif (!signature) {\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'missing_signature' };\n    return [null, msg];\n}\nconst expected = crypto.createHmac('sha256', secret).update(rawBuf).digest('hex');\nconst sigBuf = Buffer.from(signature, 'utf8');\nconst expBuf = Buffer.from(expected, 'utf8');\nif (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {\n    node.warn('[clicksign-hmac] invalid signature (sig_len=' + signature.length + ' exp_len=' + expected.length + ')');\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'invalid_signature' };\n    return [null, msg];\n}\n// Valid signature \u2014 parse body as JSON for downstream nodes\ntry {\n    msg.payload = JSON.parse(rawBuf.toString('utf8'));\n} catch (e) {\n    node.warn('[clicksign-hmac] valid signature but body is not JSON: ' + e.message);\n    msg.payload = {};\n}\nreturn [msg, null];\n",
         "outputs": 2,
         "timeout": 0,
         "noerr": 0,

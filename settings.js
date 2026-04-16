@@ -216,23 +216,12 @@ module.exports = {
      * applied to all http in nodes, or any other sort of common request processing.
      * It can be a single function or an array of middleware functions.
      */
-    // Path-scoped raw-body capture for Clicksign webhook HMAC validation.
-    // Only applies to /orcamentos/clicksign/webhook — all other routes use
-    // Node-RED's default JSON body parser unchanged.
-    httpNodeMiddleware: function(req, res, next) {
-        if (req.url && req.url.startsWith('/orcamentos/clicksign/webhook')) {
-            let raw = '';
-            req.setEncoding('utf8');
-            req.on('data', function(chunk) { raw += chunk; });
-            req.on('end', function() {
-                req.rawBody = raw;
-                try { req.body = raw ? JSON.parse(raw) : {}; } catch (e) { req.body = {}; }
-                next();
-            });
-        } else {
-            next();
-        }
-    },
+    //httpNodeMiddleware: function(req,res,next) {
+    //    // Handle/reject the request, or pass it on to the http in node by calling next();
+    //    // Optionally skip our rawBodyParser by setting this to true;
+    //    //req.skipRawBodyParser = true;
+    //    next();
+    //},
 
     /** When httpAdminRoot is used to move the UI to a different root path, the
      * following property can be used to identify a directory of static content
