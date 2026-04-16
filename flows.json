@@ -2254,7 +2254,7 @@
         "type": "tab",
         "label": "Clicksign - Webhook",
         "disabled": false,
-        "info": "POST /orcamentos/clicksign/webhook\nReceives Clicksign callbacks. Events:\n  - 'sign': marks signer as signed (updates comprovantes_de_pagamento.assinado + data_da_assinatura, or impressoes_de_recibo.signed_on_datetime + situacao=538780001)\n  - 'document_closed': downloads signed PDF, uploads to MinIO, records s3_objects, updates comprovantes_de_pagamento.arquivo_s3_id\n\nReturns 200 quickly to ACK the webhook."
+        "info": "POST /orcamentos/clicksign/webhook\n\nReceives Clicksign callbacks. Pipeline:\n  1. HMAC validate (Content-Hmac) \u2014 fail-closed: 401 on missing/invalid signature\n  2. ACK 200 \u2014 acknowledges receipt to Clicksign BEFORE processing\n     (intentional: Clicksign retries on non-200; processing failures must not cause retries)\n  3. Signer-verify (H2) \u2014 post-ack, silent drop on mismatch\n     Only runs for event='sign'. Fetches document from Clicksign API and verifies\n     the claimed signer email is actually in the document's trusted signer list.\n     Silent drop: does NOT 404/retry Clicksign (ack already 200'd)\n  4. Process event \u2014 updates DB based on event type\n\nEvents handled:\n  - 'sign': marks signer as signed (updates comprovantes_de_pagamento.assinado + data_da_assinatura, or impressoes_de_recibo.signed_on_datetime + situacao=538780001)\n  - 'document_closed': downloads signed PDF, uploads to MinIO\n\nSecurity:\n  - HMAC SHA-256 over raw body (httpNodeMiddleware in settings.js captures req.rawBody for this path only)\n  - CLICKSIGN_WEBHOOK_SECRET env var required (fail-closed if missing)\n  - Signer-email verification via Clicksign API (H2) \u2014 prevents unverified email claims\n"
     },
     {
         "id": "orc-tab-cs-enviar-rec",
@@ -2560,7 +2560,30 @@
         "y": 80,
         "wires": [
             [
+                "orc-cs-wh-hmac"
+            ]
+        ]
+    },
+    {
+        "id": "orc-cs-wh-hmac",
+        "type": "function",
+        "z": "orc-tab-cs-webhook",
+        "name": "HMAC Validate (Content-Hmac)",
+        "func": "const crypto = global.get('crypto') || require('crypto');\nconst secret = env.get('CLICKSIGN_WEBHOOK_SECRET');\nif (!secret) {\n    node.error('[clicksign-hmac] CLICKSIGN_WEBHOOK_SECRET not configured');\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'webhook_secret_not_configured' };\n    return [null, msg];\n}\nconst rawBody = msg.req && msg.req.rawBody;\nif (!rawBody) {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'raw_body_not_available' };\n    return [null, msg];\n}\nconst rawSig = (msg.req.headers['content-hmac'] || msg.req.headers['x-clicksign-signature'] || '');\nconst signature = String(rawSig).replace(/^sha256=/i, '').trim();\nif (!signature) {\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'missing_signature' };\n    return [null, msg];\n}\nconst expected = crypto.createHmac('sha256', secret).update(rawBody).digest('hex');\nconst sigBuf = Buffer.from(signature, 'utf8');\nconst expBuf = Buffer.from(expected, 'utf8');\nif (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {\n    node.warn('[clicksign-hmac] invalid signature (sig_len=' + signature.length + ' exp_len=' + expected.length + ')');\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'invalid_signature' };\n    return [null, msg];\n}\nreturn [msg, null];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 280,
+        "y": 80,
+        "wires": [
+            [
                 "orc-cs-wh-ack"
+            ],
+            [
+                "orc-cs-wh-out"
             ]
         ]
     },
@@ -2574,14 +2597,14 @@
         "timeout": 0,
         "noerr": 0,
         "libs": [],
-        "x": 400,
+        "x": 440,
         "y": 80,
         "wires": [
             [
                 "orc-cs-wh-out"
             ],
             [
-                "orc-cs-wh-proc"
+                "orc-cs-wh-signer-verify"
             ]
         ]
     },
@@ -2594,9 +2617,30 @@
         "headers": {
             "Content-Type": "application/json"
         },
-        "x": 660,
+        "x": 780,
         "y": 80,
         "wires": []
+    },
+    {
+        "id": "orc-cs-wh-signer-verify",
+        "type": "function",
+        "z": "orc-tab-cs-webhook",
+        "name": "H2 Signer Verify (Clicksign API)",
+        "func": "const csReq = global.get('csReq');\nif (typeof csReq !== 'function') {\n    node.error('[signer-verify] csReq helper not available');\n    return [null, msg]; // silent drop\n}\nconst body = msg.payload;\nconst event = body && body.event && body.event.name;\n// Only verify on 'sign' event \u2014 other events (add_signer, etc.) don't have signer email to verify\nif (event !== 'sign') {\n    return [msg, null]; // pass through\n}\nconst docKey = body && body.document && body.document.key;\nconst claimedEmail = body && body.docInfo && body.docInfo.signers && body.docInfo.signers[0] && body.docInfo.signers[0].email;\nif (!docKey) {\n    node.warn('[signer-verify] webhook missing document.key for sign event \u2014 passing through');\n    return [msg, null]; // pass through (no key to verify)\n}\nif (!claimedEmail) {\n    node.warn('[signer-verify] webhook missing docInfo.signers[0].email \u2014 passing through');\n    return [msg, null]; // pass through (no claim to verify)\n}\ntry {\n    const docRes = await csReq('GET', '/api/v1/documents/' + encodeURIComponent(docKey), null);\n    if (docRes.statusCode !== 200) {\n        node.error('[signer-verify] Clicksign GET /documents failed: HTTP ' + docRes.statusCode);\n        return [null, msg]; // silent drop \u2014 do NOT trust unverified claim\n    }\n    const doc = (docRes.body && docRes.body.document) || {};\n    const trustedEmails = (doc.signers || [])\n        .map(s => (s && s.email || '').toLowerCase())\n        .filter(e => e);\n    if (!trustedEmails.includes(claimedEmail.toLowerCase())) {\n        node.warn('[signer-verify] signer email mismatch \u2014 claimed=' + claimedEmail + ' trusted=' + JSON.stringify(trustedEmails));\n        return [null, msg]; // silent drop\n    }\n    return [msg, null];\n} catch (e) {\n    node.error('[signer-verify] lookup error: ' + (e && e.message ? e.message : String(e)));\n    return [null, msg]; // silent drop on any error\n}\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 520,
+        "y": 180,
+        "wires": [
+            [
+                "orc-cs-wh-proc"
+            ],
+            []
+        ]
     },
     {
         "id": "orc-cs-wh-proc",
@@ -2625,7 +2669,7 @@
                 "module": "crypto"
             }
         ],
-        "x": 680,
+        "x": 780,
         "y": 180,
         "wires": [
             []
