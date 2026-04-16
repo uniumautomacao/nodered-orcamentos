@@ -344,7 +344,7 @@
         "type": "function",
         "z": "orc-tab-credito-cancelar",
         "name": "Pre-authz: Lookup credito_id",
-        "func": "const pgReq = global.get('pgReq');\nconst body = msg.payload || {};\n// Accept legacy `id` or new `utilizacaoId` field; normalize to both for downstream nodes.\nconst utilizacaoId = body.utilizacaoId || body.id;\nif (!utilizacaoId || typeof utilizacaoId !== 'string') {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'utilizacaoId_required' };\n    return [null, msg];\n}\nmsg.payload.utilizacaoId = utilizacaoId;\nmsg.payload.id = utilizacaoId;\nconst res = await pgReq('GET',\n    '/utilizacoes_de_credito?id=eq.' + encodeURIComponent(utilizacaoId) + '&select=credito_id'\n);\nif (res.statusCode !== 200 || !Array.isArray(res.body) || res.body.length === 0) {\n    msg.statusCode = 404;\n    msg.payload = { ok: false, error: 'utilizacao_not_found' };\n    return [null, msg];\n}\nmsg.payload.creditoId = res.body[0].credito_id;\nreturn [msg, null];",
+        "func": "const pgReq = global.get('pgReq');\nconst body = msg.payload || {};\n// Accept legacy `id` or new `utilizacaoId` field; normalize to both for downstream nodes.\nconst utilizacaoId = body.utilizacaoId || body.id;\nif (!utilizacaoId || typeof utilizacaoId !== 'string') {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'utilizacaoId_required' };\n    return [null, msg];\n}\nconst UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nif (!UUID_RE.test(utilizacaoId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'invalid_utilizacaoId_format' };\n    return [null, msg];\n}\nmsg.payload.utilizacaoId = utilizacaoId;\nmsg.payload.id = utilizacaoId;\nconst res = await pgReq('GET',\n    '/utilizacoes_de_credito?id=eq.' + encodeURIComponent(utilizacaoId) + '&select=credito_id'\n);\nif (res.statusCode !== 200 || !Array.isArray(res.body) || res.body.length === 0) {\n    msg.statusCode = 404;\n    msg.payload = { ok: false, error: 'utilizacao_not_found' };\n    return [null, msg];\n}\nmsg.payload.creditoId = res.body[0].credito_id;\nreturn [msg, null];",
         "outputs": 2,
         "timeout": 30,
         "noerr": 0,
@@ -384,7 +384,7 @@
         "type": "function",
         "z": "orc-tab-credito-cancelar",
         "name": "Validate Input",
-        "func": "const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst body = msg.payload || {};\nconst id = body.id;\n\nif (!id || !UUID_RE.test(id)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'id must be a valid UUID (utilizacao_de_credito.id)' };\n    return [null, msg];\n}\nmsg.utilizacaoId = id;\nreturn [msg, null];",
+        "func": "const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst body = msg.payload || {};\nconst id = body.id;\n\nif (!id || !UUID_RE.test(id)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'id must be a valid UUID (utilizacao_de_credito.id)' };\n    return [null, msg];\n}\nreturn [msg, null];",
         "outputs": 2,
         "timeout": 0,
         "noerr": 0,
@@ -841,7 +841,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 420,
+        "x": 980,
         "y": 80,
         "wires": [
             [
@@ -877,7 +877,7 @@
                 "module": "url"
             }
         ],
-        "x": 880,
+        "x": 1200,
         "y": 80,
         "wires": [
             [
@@ -894,7 +894,7 @@
         "headers": {
             "Content-Type": "application/json"
         },
-        "x": 1140,
+        "x": 1420,
         "y": 80,
         "wires": []
     },
@@ -1081,7 +1081,64 @@
         "y": 80,
         "wires": [
             [
+                "orc-item-sobre-cf"
+            ]
+        ]
+    },
+    {
+        "id": "orc-item-sobre-cf",
+        "type": "subflow:orc-subflow-cf-access",
+        "z": "orc-tab-item-sobre",
+        "name": "CF Access",
+        "env": [],
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "orc-item-sobre-pre-authz"
+            ],
+            [
+                "orc-item-sobre-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-item-sobre-pre-authz",
+        "type": "function",
+        "z": "orc-tab-item-sobre",
+        "name": "Pre-authz: Lookup orcamento_id",
+        "func": "const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst pgReq = global.get('pgReq');\nif (typeof pgReq !== 'function') {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'pgReq_not_available' };\n    return [null, msg];\n}\nconst body = msg.payload || {};\nconst itemId = body.itemid || body.itemId;\nif (!itemId || typeof itemId !== 'string' || !UUID_RE.test(itemId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'invalid_itemId_format' };\n    return [null, msg];\n}\ntry {\n    const r = await pgReq('GET', '/itens_de_orcamento?id=eq.' + encodeURIComponent(itemId) + '&select=orcamento_id');\n    if (r.statusCode !== 200 || !Array.isArray(r.body) || r.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: 'item_not_found' };\n        return [null, msg];\n    }\n    msg.payload.orcamentoId = r.body[0].orcamento_id;\n    return [msg, null];\n} catch (e) {\n    node.warn('[item-sobre-pre-authz] ' + (e && e.message ? e.message : String(e)));\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'pre_authz_error' };\n    return [null, msg];\n}",
+        "outputs": 2,
+        "timeout": 30,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 80,
+        "wires": [
+            [
+                "orc-item-sobre-authz"
+            ],
+            [
+                "orc-item-sobre-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-item-sobre-authz",
+        "type": "subflow:orc-subflow-ownership-check",
+        "z": "orc-tab-item-sobre",
+        "name": "Authz: Ownership Check",
+        "env": [],
+        "x": 780,
+        "y": 80,
+        "wires": [
+            [
                 "orc-item-sobre-validate"
+            ],
+            [
+                "orc-item-sobre-out"
             ]
         ]
     },
@@ -1097,7 +1154,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 420,
+        "x": 980,
         "y": 80,
         "wires": [
             [
@@ -1133,7 +1190,7 @@
                 "module": "url"
             }
         ],
-        "x": 860,
+        "x": 1200,
         "y": 80,
         "wires": [
             [
@@ -1150,7 +1207,7 @@
         "headers": {
             "Content-Type": "application/json"
         },
-        "x": 1140,
+        "x": 1420,
         "y": 80,
         "wires": []
     },
@@ -1209,7 +1266,41 @@
         "y": 80,
         "wires": [
             [
+                "orc-desmembrar-cf"
+            ]
+        ]
+    },
+    {
+        "id": "orc-desmembrar-cf",
+        "type": "subflow:orc-subflow-cf-access",
+        "z": "orc-tab-desmembrar",
+        "name": "CF Access",
+        "env": [],
+        "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "orc-desmembrar-authz"
+            ],
+            [
+                "orc-desmembrar-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-desmembrar-authz",
+        "type": "subflow:orc-subflow-ownership-check",
+        "z": "orc-tab-desmembrar",
+        "name": "Authz: Ownership Check",
+        "env": [],
+        "x": 580,
+        "y": 80,
+        "wires": [
+            [
                 "orc-desmembrar-validate"
+            ],
+            [
+                "orc-desmembrar-out"
             ]
         ]
     },
@@ -1225,7 +1316,7 @@
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 420,
+        "x": 780,
         "y": 80,
         "wires": [
             [
@@ -1261,7 +1352,7 @@
                 "module": "url"
             }
         ],
-        "x": 860,
+        "x": 1000,
         "y": 80,
         "wires": [
             [
@@ -1278,7 +1369,7 @@
         "headers": {
             "Content-Type": "application/json"
         },
-        "x": 1140,
+        "x": 1220,
         "y": 80,
         "wires": []
     },
@@ -3299,6 +3390,46 @@
         "z": "orc-tab-credito-devolucao-os",
         "name": "CF Access",
         "x": 400,
+        "y": 80,
+        "wires": [
+            [
+                "orc-devol-pre-authz"
+            ],
+            [
+                "orc-devol-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-devol-pre-authz",
+        "type": "function",
+        "z": "orc-tab-credito-devolucao-os",
+        "name": "Pre-authz: Lookup orcamento_id",
+        "func": "const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst pgReq = global.get('pgReq');\nif (typeof pgReq !== 'function') {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'pgReq_not_available' };\n    return [null, msg];\n}\nconst body = msg.payload || {};\nconst itemOrcamentoId = body.itemOrcamentoId || body.itemorcamentoid;\nif (!itemOrcamentoId || typeof itemOrcamentoId !== 'string' || !UUID_RE.test(itemOrcamentoId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'invalid_itemOrcamentoId_format' };\n    return [null, msg];\n}\ntry {\n    const r = await pgReq('GET', '/itens_de_orcamento?id=eq.' + encodeURIComponent(itemOrcamentoId) + '&select=orcamento_id');\n    if (r.statusCode !== 200 || !Array.isArray(r.body) || r.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: 'item_not_found' };\n        return [null, msg];\n    }\n    msg.payload.orcamentoId = r.body[0].orcamento_id;\n    return [msg, null];\n} catch (e) {\n    node.warn('[devol-pre-authz] ' + (e && e.message ? e.message : String(e)));\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'pre_authz_error' };\n    return [null, msg];\n}",
+        "outputs": 2,
+        "timeout": 30,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 580,
+        "y": 80,
+        "wires": [
+            [
+                "orc-devol-authz"
+            ],
+            [
+                "orc-devol-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-devol-authz",
+        "type": "subflow:orc-subflow-ownership-check",
+        "z": "orc-tab-credito-devolucao-os",
+        "name": "Authz: Ownership Check",
+        "env": [],
+        "x": 780,
         "y": 80,
         "wires": [
             [
