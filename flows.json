@@ -2589,9 +2589,22 @@
                 "orc-cs-wh-ack"
             ],
             [
-                "orc-cs-wh-out"
+                "orc-cs-wh-err-out"
             ]
         ]
+    },
+    {
+        "id": "orc-cs-wh-err-out",
+        "type": "http response",
+        "z": "orc-tab-cs-webhook",
+        "name": "Error Response (dynamic status)",
+        "statusCode": "",
+        "headers": {
+            "Content-Type": "application/json"
+        },
+        "x": 520,
+        "y": 80,
+        "wires": []
     },
     {
         "id": "orc-cs-wh-ack",
