@@ -2990,7 +2990,39 @@
         "y": 80,
         "wires": [
             [
+                "orc-pub-cf"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-cf",
+        "type": "subflow:orc-subflow-cf-access",
+        "z": "orc-tab-publicar-pedido",
+        "name": "CF Access",
+        "x": 340,
+        "y": 80,
+        "wires": [
+            [
+                "orc-pub-authz"
+            ],
+            [
+                "orc-pub-err-out"
+            ]
+        ]
+    },
+    {
+        "id": "orc-pub-authz",
+        "type": "subflow:orc-subflow-ownership-check",
+        "z": "orc-tab-publicar-pedido",
+        "name": "Authz: Ownership Check",
+        "x": 500,
+        "y": 80,
+        "wires": [
+            [
                 "orc-pub-validate"
+            ],
+            [
+                "orc-pub-err-out"
             ]
         ]
     },
