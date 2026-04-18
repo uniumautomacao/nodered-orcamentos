@@ -542,7 +542,6 @@ module.exports = {
     functionGlobalContext: {
         // os:require("os"),
         pgReq: require("./projects/orcamentos/helpers/pgReq.js"),
-        csReq: require("./projects/orcamentos/helpers/csReq.js"),
         aws4sign: require("./projects/orcamentos/helpers/aws4.js"),
     },
 

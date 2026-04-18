@@ -3,7 +3,9 @@
 Node-RED flows for the **Orcamentos** module (Module F) of the Supabase migration project.
 
 ## Scope
-This repo holds Node-RED flows migrated from Power Automate for Module F (Sales/Orcamentos). Entities in scope include `orcamento`, `orcamentoitem`, `credito`, `clicksign`, PDF generation, and publicar pedido operations.
+This repo holds Node-RED flows migrated from Power Automate for Module F (Sales/Orcamentos). Entities in scope include `orcamento`, `orcamentoitem`, `credito`, PDF generation, and publicar pedido operations.
+
+> **Note (2026-04-18, Phase 6 F3):** Clicksign integration (Core Envelope subflow, Enviar Comprovante, Enviar Recibo, Webhook + `csReq.js` helper) was extracted into the dedicated module `nodered-clicksign` at `https://dev-nodered-clicksign.unium.me`. Spec: `.claude/plans/specs/2026-04-18-phase6-f3-clicksign-consolidation.md`.
 
 ## Instances
 - **DEV** — `https://dev-nodered-orcamentos.unium.me` (TrueNAS app `dev-nodered-orcamentos`, port 1899, container `ix-dev-nodered-orcamentos-node-red-1`, `NODE_RED_ENV=dev`)

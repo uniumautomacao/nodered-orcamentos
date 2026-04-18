@@ -1,6 +1,6 @@
 {
     "name": "orcamentos",
-    "description": "Node-RED Orcamentos - Module F migration (Supabase). Flows for sales/orcamentos, crédito, clicksign, PDF, publicar pedido.",
+    "description": "Node-RED Orcamentos - Module F migration (Supabase). Flows for sales/orcamentos, crédito, PDF, publicar pedido. Clicksign migrated to nodered-clicksign (Phase 6 F3, 2026-04-18).",
     "version": "0.0.1",
     "dependencies": {},
     "node-red": {
