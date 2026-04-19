@@ -2827,5 +2827,176 @@
         "orc-devol-out"
       ]
     ]
+  },
+  {
+    "id": "orc-tab-credito-rma",
+    "type": "tab",
+    "label": "Credito - Gerar de RMA",
+    "disabled": false,
+    "info": "POST /orcamentos/creditos/gerar-de-rma\n\nDEV-ONLY. Guarded by NODE_RED_ENV === 'dev' at pre-authz stage (returns 503 otherwise).\n\nBody: { mercadoriaId: UUID, itemOrcamentoId: UUID }\n\nLogic (F7.5 — mirrors PA `f7cfa93b` for Supabase-native path):\n 1. Validate both UUIDs.\n 2. GET estoque_rmas[mercadoriaId] -> opcao_devolucao, rma_id. 404 if missing.\n 3. If opcao_devolucao === 100000002 -> 409 'Credito ja gerado' (idempotency).\n 4. GET itens_de_orcamento[itemOrcamentoId] -> qty/value/orcamento_id. 404 if missing.\n 5. If quantidade_disponivel_devolucao <= 0 -> 409 'Nenhuma devolucao disponivel'.\n 6. GET orcamentos[orcamento_id] -> cliente_id. 500 if missing.\n 7. credito_value = valor_devolucao_disponivel / quantidade_disponivel_devolucao (4 decimals).\n 8. INSERT creditos_do_cliente. Rollback on step 9 failure.\n 9. PATCH itens_de_orcamento.quantidade_devolvida += 1.\n10. PATCH estoque_rmas.opcao_devolucao = 100000002 (log-only on failure).\n11. 200 { ok:true, credito_id, valor, mercadoriaUpdated }.\n\nAuth: CF Access + ownership check (same as sibling credito flows).\n"
+  },
+  {
+    "id": "orc-rma-in",
+    "type": "http in",
+    "z": "orc-tab-credito-rma",
+    "name": "POST /orcamentos/creditos/gerar-de-rma",
+    "url": "/orcamentos/creditos/gerar-de-rma",
+    "method": "post",
+    "upload": false,
+    "swaggerDoc": "",
+    "x": 200,
+    "y": 80,
+    "wires": [
+      [
+        "orc-rma-cf"
+      ]
+    ]
+  },
+  {
+    "id": "orc-rma-cf",
+    "type": "subflow:orc-subflow-cf-access",
+    "z": "orc-tab-credito-rma",
+    "name": "CF Access",
+    "x": 400,
+    "y": 80,
+    "wires": [
+      [
+        "orc-rma-pre-authz"
+      ],
+      [
+        "orc-rma-out"
+      ]
+    ]
+  },
+  {
+    "id": "orc-rma-pre-authz",
+    "type": "function",
+    "z": "orc-tab-credito-rma",
+    "name": "Pre-authz: DEV guard + lookup orcamento_id",
+    "func": "// F7.5 HARD RULE: DEV only. If not DEV, return 503 before any side-effect.\nconst nodeEnv = env.get('NODE_RED_ENV') || 'unknown';\nif (nodeEnv !== 'dev') {\n    msg.statusCode = 503;\n    msg.payload = { ok: false, error: 'endpoint_disabled_non_dev', env: nodeEnv };\n    return [null, msg];\n}\n\nconst UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst pgReq = global.get('pgReq');\nif (typeof pgReq !== 'function') {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'pgReq_not_available' };\n    return [null, msg];\n}\nconst body = msg.payload || {};\nconst itemOrcamentoId = body.itemOrcamentoId || body.itemorcamentoid;\nif (!itemOrcamentoId || typeof itemOrcamentoId !== 'string' || !UUID_RE.test(itemOrcamentoId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'invalid_itemOrcamentoId_format' };\n    return [null, msg];\n}\ntry {\n    const r = await pgReq('GET', '/itens_de_orcamento?id=eq.' + encodeURIComponent(itemOrcamentoId) + '&select=orcamento_id');\n    if (r.statusCode !== 200 || !Array.isArray(r.body) || r.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: 'item_not_found' };\n        return [null, msg];\n    }\n    msg.payload.orcamentoId = r.body[0].orcamento_id;\n    return [msg, null];\n} catch (e) {\n    node.warn('[rma-pre-authz] ' + (e && e.message ? e.message : String(e)));\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'pre_authz_error' };\n    return [null, msg];\n}\n",
+    "outputs": 2,
+    "timeout": 30,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 620,
+    "y": 80,
+    "wires": [
+      [
+        "orc-rma-authz"
+      ],
+      [
+        "orc-rma-out"
+      ]
+    ]
+  },
+  {
+    "id": "orc-rma-authz",
+    "type": "subflow:orc-subflow-ownership-check",
+    "z": "orc-tab-credito-rma",
+    "name": "Authz: Ownership Check",
+    "env": [],
+    "x": 820,
+    "y": 80,
+    "wires": [
+      [
+        "orc-rma-validate"
+      ],
+      [
+        "orc-rma-out"
+      ]
+    ]
+  },
+  {
+    "id": "orc-rma-validate",
+    "type": "function",
+    "z": "orc-tab-credito-rma",
+    "name": "Validate Input",
+    "func": "const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;\nconst body = msg.payload || {};\nconst mercadoriaId = body.mercadoriaId || body.mercadoriaid;\nconst itemOrcamentoId = body.itemOrcamentoId || body.itemorcamentoid;\n\nif (!mercadoriaId || typeof mercadoriaId !== 'string' || !UUID_RE.test(mercadoriaId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'mercadoriaId must be a valid UUID' };\n    return [null, msg];\n}\nif (!itemOrcamentoId || typeof itemOrcamentoId !== 'string' || !UUID_RE.test(itemOrcamentoId)) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'itemOrcamentoId must be a valid UUID' };\n    return [null, msg];\n}\nmsg.mercadoriaId = mercadoriaId;\nmsg.itemOrcamentoId = itemOrcamentoId;\nreturn [msg, null];\n",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1020,
+    "y": 80,
+    "wires": [
+      [
+        "orc-rma-exec"
+      ],
+      [
+        "orc-rma-out"
+      ]
+    ]
+  },
+  {
+    "id": "orc-rma-exec",
+    "type": "function",
+    "z": "orc-tab-credito-rma",
+    "name": "Execute Gerar Credito de RMA",
+    "func": "const pgReq = global.get('pgReq');\nif (typeof pgReq !== 'function') {\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'pgReq_not_available' };\n    return msg;\n}\n\nconst mercadoriaId = msg.mercadoriaId;\nconst itemOrcamentoId = msg.itemOrcamentoId;\nconst OPCAO_CREDITO_GERADO = 100000002;\n\ntry {\n    // Step 2: GET estoque_rmas\n    const mercRes = await pgReq('GET', '/estoque_rmas?id=eq.' + encodeURIComponent(mercadoriaId) + '&select=id,opcao_devolucao,rma_id');\n    if (mercRes.statusCode !== 200 || !Array.isArray(mercRes.body) || mercRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: 'Mercadoria RMA nao encontrada' };\n        return msg;\n    }\n    const mercadoria = mercRes.body[0];\n\n    // Step 3: idempotency guard\n    if (mercadoria.opcao_devolucao === OPCAO_CREDITO_GERADO) {\n        msg.statusCode = 409;\n        msg.payload = { ok: false, error: 'Credito ja gerado' };\n        return msg;\n    }\n\n    // Step 4: GET itens_de_orcamento\n    const itemRes = await pgReq('GET', '/itens_de_orcamento?id=eq.' + encodeURIComponent(itemOrcamentoId) + '&select=id,orcamento_id,quantidade_disponivel_devolucao,valor_devolucao_disponivel,quantidade_devolvida');\n    if (itemRes.statusCode !== 200 || !Array.isArray(itemRes.body) || itemRes.body.length === 0) {\n        msg.statusCode = 404;\n        msg.payload = { ok: false, error: 'Item de Orcamento nao encontrado' };\n        return msg;\n    }\n    const item = itemRes.body[0];\n    const qtdDisponivel = Number(item.quantidade_disponivel_devolucao || 0);\n    const valDevolucaoDisponivel = Number(item.valor_devolucao_disponivel || 0);\n    const qtdDevolvidaAtual = Number(item.quantidade_devolvida || 0);\n\n    // Step 5: availability check\n    if (qtdDisponivel <= 0) {\n        msg.statusCode = 409;\n        msg.payload = { ok: false, error: 'Nenhuma devolucao disponivel' };\n        return msg;\n    }\n\n    // Step 6: GET orcamentos -> cliente_id\n    const orcRes = await pgReq('GET', '/orcamentos?id=eq.' + encodeURIComponent(item.orcamento_id) + '&select=id,cliente_id');\n    if (orcRes.statusCode !== 200 || !Array.isArray(orcRes.body) || orcRes.body.length === 0) {\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: 'Orcamento inexistente' };\n        return msg;\n    }\n    const orcamento = orcRes.body[0];\n    if (!orcamento.cliente_id) {\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: 'Orcamento has no cliente_id' };\n        return msg;\n    }\n\n    // Step 7: compute credito_value = valor_devolucao_disponivel / quantidade_disponivel_devolucao\n    // qtdDisponivel > 0 already guarded at step 5.\n    let creditoValue = valDevolucaoDisponivel / qtdDisponivel;\n    creditoValue = Math.round(creditoValue * 10000) / 10000;\n\n    // Step 8: INSERT creditos_do_cliente\n    const nowIso = new Date().toISOString();\n    const novoCredito = {\n        cliente_id: orcamento.cliente_id,\n        data_de_lancamento: nowIso,\n        item_de_orcamento_de_origem_id: itemOrcamentoId,\n        valor_do_credito: creditoValue,\n        complemento_descricao: 'Devolucao de RMA (mercadoriaId=' + mercadoriaId + ')'\n    };\n    const createRes = await pgReq('POST', '/creditos_do_cliente', novoCredito, { 'Prefer': 'return=representation' });\n    if (createRes.statusCode < 200 || createRes.statusCode >= 300 || !Array.isArray(createRes.body) || createRes.body.length === 0) {\n        msg.statusCode = 500;\n        const errBody = (createRes.body && (createRes.body.message || createRes.body.error)) || JSON.stringify(createRes.body);\n        msg.payload = { ok: false, error: 'Failed to create credito: HTTP ' + createRes.statusCode + ' - ' + errBody };\n        return msg;\n    }\n    const novoCreditoId = createRes.body[0].id;\n\n    // Step 9: PATCH itens_de_orcamento.quantidade_devolvida += 1\n    const novaQtdDevolvida = qtdDevolvidaAtual + 1;\n    const patchItemRes = await pgReq('PATCH', '/itens_de_orcamento?id=eq.' + encodeURIComponent(itemOrcamentoId), {\n        quantidade_devolvida: novaQtdDevolvida\n    });\n    if (patchItemRes.statusCode < 200 || patchItemRes.statusCode >= 300) {\n        // rollback credito (DEV-safe best-effort; DEV is not fully atomic)\n        await pgReq('DELETE', '/creditos_do_cliente?id=eq.' + encodeURIComponent(novoCreditoId));\n        msg.statusCode = 500;\n        msg.payload = { ok: false, error: 'Failed to update item.quantidade_devolvida (rolled back credito): HTTP ' + patchItemRes.statusCode };\n        return msg;\n    }\n\n    // Step 10: PATCH estoque_rmas.opcao_devolucao = 100000002 (log-only on failure)\n    let mercadoriaUpdated = true;\n    let mercadoriaUpdateError = null;\n    try {\n        const patchMercRes = await pgReq('PATCH', '/estoque_rmas?id=eq.' + encodeURIComponent(mercadoriaId), {\n            opcao_devolucao: OPCAO_CREDITO_GERADO\n        });\n        if (patchMercRes.statusCode < 200 || patchMercRes.statusCode >= 300) {\n            mercadoriaUpdated = false;\n            mercadoriaUpdateError = 'HTTP ' + patchMercRes.statusCode;\n            node.warn('[gerar-de-rma] estoque_rmas PATCH failed: ' + mercadoriaUpdateError);\n        }\n    } catch (e) {\n        mercadoriaUpdated = false;\n        mercadoriaUpdateError = (e && e.message) ? e.message : String(e);\n        node.warn('[gerar-de-rma] estoque_rmas PATCH exception: ' + mercadoriaUpdateError);\n    }\n\n    // Step 11: 200 OK\n    msg.statusCode = 200;\n    msg.payload = {\n        ok: true,\n        credito_id: novoCreditoId,\n        valor: creditoValue,\n        mercadoriaUpdated: mercadoriaUpdated,\n        mercadoriaUpdateError: mercadoriaUpdateError\n    };\n    return msg;\n} catch (err) {\n    node.error('[gerar-de-rma] ' + (err && err.message) + (err && err.stack ? '\\n' + err.stack : ''), msg);\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'Internal error' };\n    return msg;\n}\n",
+    "outputs": 1,
+    "timeout": 60,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 1240,
+    "y": 80,
+    "wires": [
+      [
+        "orc-rma-out"
+      ]
+    ]
+  },
+  {
+    "id": "orc-rma-out",
+    "type": "http response",
+    "z": "orc-tab-credito-rma",
+    "name": "Response",
+    "statusCode": "",
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "x": 1460,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "orc-rma-catch",
+    "type": "catch",
+    "z": "orc-tab-credito-rma",
+    "name": "Catch All",
+    "scope": null,
+    "uncaught": false,
+    "x": 160,
+    "y": 200,
+    "wires": [
+      [
+        "orc-rma-err"
+      ]
+    ]
+  },
+  {
+    "id": "orc-rma-err",
+    "type": "function",
+    "z": "orc-tab-credito-rma",
+    "name": "Error Handler",
+    "func": "const errMsg = (msg.error && msg.error.message) || 'Unknown error';\nnode.warn('[gerar-de-rma] CATCH: ' + errMsg);\nmsg.statusCode = msg.statusCode || 500;\nmsg.headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' };\nmsg.payload = { ok: false, error: 'Internal error', flow: 'gerar-de-rma', timestamp: new Date().toISOString() };\nreturn msg;\n",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 200,
+    "wires": [
+      [
+        "orc-rma-out"
+      ]
+    ]
   }
 ]
