@@ -2331,7 +2331,7 @@
     "type": "tab",
     "label": "Publicar Pedido",
     "disabled": false,
-    "info": "POST /orcamentos/publicar-pedido\n\nInput: { projetoId?, clienteId, pedidoPdfId, orcamentoId, novoDescritivo?, urlDescritivo?, descricaoOsPti? }\n\nLogic (PA port: '(Orçamento) - Publicar Pedido', workflowid 141a46bd-37d4-f011-8544-000d3ac17330):\n1. Validate UUIDs (projetoId optional; rest required)\n2. GET orcamento (select desconto_percentual, sem_instalacao, consultor_id)\n3. GET pedido_pdf (existence check)\n4. LIST itens_de_orcamento (filter: removido=false, e_devolucao=false, opcao_de_fornecimento in (100000000,100000001,100000002))\n5. For each item: PATCH with custo_de_compra_fixado, valor_final_negociado, valor_final_negociado_de_servico (calculation mirrors PA)\n6. Call subflow firmar-utilizacoes-internal (link call)\n7. PATCH orcamento (pedido_pdf_id, projeto_id) — does NOT set publicado/data_publicacao (PA doesn't either)\n8. PATCH pedido_pdf (orcamento_id)\n9. If projetoId: Upsert OS PTI (tipo_de_servico=100000005) via PostgREST — append novo descritivo to descricao if novoDescritivo=true\n10. Call link-out into transformar-em-os → receives osIds\n11. Return { ok, orcamentoId, pedidoPdfId, osIds, osPtiId? }\n\nIdempotency: step 5 (PATCH itens) and step 9 (upsert OS PTI by project+tipo) are idempotent; step 10 (transformar-em-os) is idempotent (checks existing OS by projeto+tipo_de_servico).\n\nNotes on schema gaps vs PA:\n- ordens_de_servico has no orcamento_id column → PTI lookup uses projeto_id + tipo_de_servico (matches PA)\n- ordens_de_servico has no url_para_obter_arquivos/dias_para_conclusao/publicado_por/data_de_publicacao → novoDescritivo only updates descricao field"
+    "info": "POST /orcamentos/publicar-pedido\n\nInput: { projetoId?, clienteId, pedidoPdfId, orcamentoId, novoDescritivo?, urlDescritivo?, descricaoOsPti? }\n\nLogic (PA port: '(Orçamento) - Publicar Pedido', workflowid 141a46bd-37d4-f011-8544-000d3ac17330):\n1. Validate UUIDs (projetoId optional; rest required)\n2. GET orcamento (select desconto_percentual, sem_instalacao, consultor_id)\n3. GET pedido_pdf (existence check)\n4. LIST itens_de_orcamento (filter: removido=false, e_devolucao=false, opcao_de_fornecimento in (100000000,100000001,100000002))\n5. For each item: PATCH with custo_de_compra_fixado, valor_final_negociado, valor_final_negociado_de_servico (calculation mirrors PA)\n6. Call subflow firmar-utilizacoes-internal (link call)\n7. PATCH orcamento (pedido_pdf_id, projeto_id) — does NOT set publicado/data_publicacao (PA doesn't either)\n8. PATCH pedido_pdf (orcamento_id)\n9. If projetoId: Upsert OS PTI (tipo_de_servico=100000005) via PostgREST — append novo descritivo to descricao if novoDescritivo=true\n10. Call link-out into transformar-em-os → receives osIds\n11. Return { ok, orcamentoId, pedidoPdfId, osIds, osPtiId? }\n\nIdempotency: step 5 (PATCH itens) and step 9 (upsert OS PTI by project+tipo) are idempotent; step 10 (transformar-em-os) is idempotent (checks existing OS by projeto+tipo_de_servico).\n\nNotes on schema gaps vs PA:\n- ordens_de_servico has no orcamento_id column → PTI lookup uses projeto_id + tipo_de_servico (matches PA)\n- ordens_de_servico has no url_para_obter_arquivos/dias_para_conclusao/publicado_por/data_de_publicacao → novoDescritivo only updates descricao field\n\nAuth: HMAC-SHA256 over \"<X-Timestamp>.\" + rawBody, header X-Signature: sha256=<hex>, ±5min window, secret PUBLISH_ORCAMENTO_HMAC_SECRET. See docs/phase7-p3.1-http-auth-audit.md §3."
   },
   {
     "id": "orc-pub-in",
@@ -2342,11 +2342,40 @@
     "method": "post",
     "upload": false,
     "swaggerDoc": "",
+    "skipBodyParsing": true,
     "x": 170,
     "y": 80,
     "wires": [
       [
+        "orc-pub-hmac"
+      ]
+    ]
+  },
+  {
+    "id": "orc-pub-hmac",
+    "type": "function",
+    "z": "orc-tab-publicar-pedido",
+    "name": "HMAC Validate (X-Signature)",
+    "func": "const secret = env.get('PUBLISH_ORCAMENTO_HMAC_SECRET');\nif (!secret) {\n    node.error('[orc-pub-hmac] PUBLISH_ORCAMENTO_HMAC_SECRET not configured');\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'publish_secret_not_configured' };\n    return [null, msg];\n}\n// skipBodyParsing=true → msg.req.body is a raw Buffer\nconst rawBuf = msg.req && msg.req.body;\nif (!Buffer.isBuffer(rawBuf) || rawBuf.length === 0) {\n    node.error('[orc-pub-hmac] raw body not available (expected Buffer from skipBodyParsing)');\n    msg.statusCode = 500;\n    msg.payload = { ok: false, error: 'raw_body_not_available' };\n    return [null, msg];\n}\n// 1. Timestamp window (replay protection, ±5 min)\nconst tsHeader = msg.req.headers['x-timestamp'];\nconst ts = Number(tsHeader);\nif (!tsHeader || Number.isNaN(ts)) {\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'missing_or_invalid_timestamp' };\n    return [null, msg];\n}\nconst skew = Math.abs(Date.now() - ts);\nif (skew > 5 * 60 * 1000) {\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'timestamp_out_of_window' };\n    return [null, msg];\n}\n// 2. Extract + sanitize signature (strict hex, lowercase post-normalize)\nconst rawSig = String(msg.req.headers['x-signature'] || '').replace(/^sha256=/i, '').trim();\nif (!rawSig || !/^[0-9a-f]+$/i.test(rawSig)) {\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'missing_or_malformed_signature' };\n    return [null, msg];\n}\n// 3. Compute expected HMAC-SHA256 over `${ts}.${rawBody}`\nconst signingInput = Buffer.concat([\n    Buffer.from(String(ts) + '.', 'utf8'),\n    rawBuf\n]);\nconst expected = nodeCrypto.createHmac('sha256', secret).update(signingInput).digest('hex');\n// 4. Constant-time compare\nconst sigBuf = Buffer.from(rawSig.toLowerCase(), 'hex');\nconst expBuf = Buffer.from(expected, 'hex');\nif (sigBuf.length !== expBuf.length || !nodeCrypto.timingSafeEqual(sigBuf, expBuf)) {\n    node.warn('[orc-pub-hmac] invalid signature (sig_len=' + sigBuf.length + ' exp_len=' + expBuf.length + ')');\n    msg.statusCode = 401;\n    msg.payload = { ok: false, error: 'invalid_signature' };\n    return [null, msg];\n}\n// 5. Parse JSON body for downstream (orc-pub-cf reads headers; orc-pub-authz + orc-pub-validate read msg.payload as object)\ntry {\n    msg.payload = JSON.parse(rawBuf.toString('utf8'));\n} catch (e) {\n    msg.statusCode = 400;\n    msg.payload = { ok: false, error: 'body_not_json' };\n    return [null, msg];\n}\nreturn [msg, null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [
+      {
+        "var": "nodeCrypto",
+        "module": "crypto"
+      }
+    ],
+    "x": 260,
+    "y": 80,
+    "wires": [
+      [
         "orc-pub-cf"
+      ],
+      [
+        "orc-pub-err-out"
       ]
     ]
   },
